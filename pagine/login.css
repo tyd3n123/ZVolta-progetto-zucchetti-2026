@@ -1,0 +1,103 @@
+* {
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  margin: 0;
+  height: 100vh;
+  background: linear-gradient(135deg, #1e1e1e, #2a2a2a);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-container {
+  width: 100%;
+  max-width: 380px;
+  padding: 40px 30px;
+  text-align: center;
+}
+
+.login-container h1 {
+  color: white;
+  margin-bottom: 30px;
+  letter-spacing: 2px;
+}
+
+.field {
+  text-align: left;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.field label {
+  color: white;
+  font-size: 14px;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.field input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 25px;
+  border: none;
+  outline: none;
+  font-size: 14px;
+}
+
+.password-field .show-password {
+  position: absolute;
+  right: 10px;
+  top: 28px;
+  font-size: 12px;
+  color: #f5a623;
+  cursor: pointer;
+}
+
+.login-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 14px;
+  border-radius: 25px;
+  border: none;
+  background: #0d6efd;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.login-btn:hover {
+  background: #0b5ed7;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  margin: 25px 0;
+  color: #aaa;
+  font-size: 13px;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #555;
+}
+
+.divider span {
+  margin: 0 10px;
+}
+
+.register-link {
+  color: #0d6efd;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.register-link:hover {
+  text-decoration: underline;
+}
