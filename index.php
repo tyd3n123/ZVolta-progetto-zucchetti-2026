@@ -1,24 +1,4 @@
-<?php
-// ================================
-// CONFIGURAZIONE DATABASE
-// ================================
-$host = "localhost";       // di solito localhost
-$user = "root";            // utente MySQL
-$password = "";            // password MySQL
-$database = "z_volta";     // nome del database
-
-// Connessione
-$conn = new mysqli($host, $user, $password, $database);
-
-// Controllo connessione
-if ($conn->connect_error) {
-    die("Connessione fallita: " . $conn->connect_error);
-}
-
-// ================================
-// FUNZIONE PER STAMPARE TABELLE HTML
-// ================================
-function printTable($result, $title) {
+I
     echo "<h2>$title</h2>";
     if ($result->num_rows > 0) {
         echo "<table border='1' cellpadding='5' cellspacing='0'>";
@@ -42,9 +22,9 @@ function printTable($result, $title) {
     }
 }
 
-// ================================
+// ===============================
 // QUERY TABELLE
-// ================================
+// ===============================
 
 // 1️⃣ Utenti con coordinatore
 $sql_utenti = "
