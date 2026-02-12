@@ -1,5 +1,7 @@
 <?php
 
+// Per testare in localhost utilizzare : " php -S localhost:8000 -t public "
+
 // Per far funzionare il tutto dobbiamo inserire le credenziali corrette in modo tale che tutti possano accedere al database
 // Per utilizzare il database in qualsiasi pagina, basta utilizzare questo comando:
 // require_once __DIR__ . "/../config/connessione.php"; --> il path cambia in base a dove vi trovate, se non sapete come fare scrivete a Pop
