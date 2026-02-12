@@ -4,13 +4,17 @@
 }
 
 body {
-  margin: 0;
-  height: 100vh;
-  background: linear-gradient(135deg, #1e1e1e, #2a2a2a);
+  min-height: 90vh;                 
+  background-image: url("../Immagini/BackGround1.png"); 
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
 }
+
 
 .login-container {
   width: 100%;
@@ -72,32 +76,3 @@ body {
   background: #0b5ed7;
 }
 
-.divider {
-  display: flex;
-  align-items: center;
-  margin: 25px 0;
-  color: #aaa;
-  font-size: 13px;
-}
-
-.divider::before,
-.divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: #555;
-}
-
-.divider span {
-  margin: 0 10px;
-}
-
-.register-link {
-  color: #0d6efd;
-  text-decoration: none;
-  font-size: 14px;
-}
-
-.register-link:hover {
-  text-decoration: underline;
-}
