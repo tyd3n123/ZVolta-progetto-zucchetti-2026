@@ -1,4 +1,4 @@
-I
+
     echo "<h2>$title</h2>";
     if ($result->num_rows > 0) {
         echo "<table border='1' cellpadding='5' cellspacing='0'>";
