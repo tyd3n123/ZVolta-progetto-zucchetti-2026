@@ -1,5 +1,4 @@
 <?php
-// index.php (o qualsiasi nome tu voglia dare al file)
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -12,8 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     <?php
-    // Inseriamo tutto il CSS qui dentro (inline)
-    // In alternativa puoi mantenere <link rel="stylesheet" href="hp.css"> se preferisci file separato
+
     ?>
     * {
       margin: 0;
@@ -127,7 +125,7 @@
       color: white;
       display: flex;
       align-items: center;
-      padding-top: 80px; /* per lasciare spazio sotto header fisso */
+      padding-top: 80px; 
     }
 
     .hero-content {
@@ -237,3 +235,4 @@
 
 </body>
 </html>
+
