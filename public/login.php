@@ -1,3 +1,10 @@
+<<<<<<< HEAD
+=======
+
+<?php
+
+session_start();
+>>>>>>> a8585eb77a75fb4ea1f585dd9bf14c091b541633
 
 
 <!DOCTYPE html>
