@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-=======
-
-<?php
-
-session_start();
->>>>>>> a8585eb77a75fb4ea1f585dd9bf14c091b541633
 
 
 <!DOCTYPE html>
@@ -16,6 +9,12 @@ session_start();
   <link rel="stylesheet" href="./login.css">
 </head>
 <body>
+    <div class="navbar">
+      <a href="./hp.php" class="navbar-home">Home</a>
+      <span class="navbar-separator">|</span>
+      <span class="navbar-current">Log in</span>
+    </div>
+    
     <div class="login-container">
       <h1>Z VOLTA</h1>
 

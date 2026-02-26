@@ -1,5 +1,4 @@
 <?php
-<<<<<<< HEAD
 
 session_start();
 $_SESSION["logged_in"] = false;
@@ -35,59 +34,13 @@ if ($result->num_rows === 0) {
 
 $user = $result->fetch_assoc();
 echo "Utente trovato: " . $user["username"] . $user["id_utente"]. "<br>";
-if($user["username"] === $username && $user["password"]===$password)tente"];
-name"] = $user["username"];
-
-//header("Location: ../dashboard.php");
-exit();
-=======
-session_start();
-
-require_once __DIR__ . '/../../config/config.php';
-
-
-$username = trim($_POST['username'] ?? '');
-$password = $_POST['password'] ?? '';
-
-if ($username === '' || $password === '') {
-    $_SESSION['login_error'] = "Inserisci username e password.";
+if($user["username"] === $username && $user["password"]===$password) {
+    $_SESSION["username"] = $user["username"];
+    $_SESSION["logged_in"] = true;
+    header("Location: ../dashboard.php");
+    exit();
+} else {
+    $_SESSION["login_error"] = "Username o password errati";
     header("Location: ../login.php");
-    exit;
+    exit();
 }
-
-
-$sql = "SELECT id, username, password FROM users WHERE username = ? LIMIT 1";
-$stmt = $conn->prepare($sql);
-
-if (!$stmt) {
-    die("Errore prepare: " . $conn->error);
-}
-
-$stmt->bind_param("s", $username);
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result->num_rows !== 1) {
-    $_SESSION['login_error'] = "Credenziali non valide.";
-    header("Location: ../login.php");
-    exit;
-}
-
-$row = $result->fetch_assoc();
-
-if (!password_verify($password, $row['password'])) {
-    $_SESSION['login_error'] = "Credenziali non valide.";
-    header("Location: ../login.php");
-    exit;
-}
-
-// 5) Login OK -> sessione
-session_regenerate_id(true);
-$_SESSION['logged'] = true;
-$_SESSION['user_id'] = $row['id'];
-$_SESSION['username'] = $row['username'];
-
-unset($_SESSION['login_error']);
-header("Location: ../area-privata.php");
-exit;
->>>>>>> a8585eb77a75fb4ea1f585dd9bf14c091b541633

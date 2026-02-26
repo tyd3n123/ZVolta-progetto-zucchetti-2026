@@ -218,6 +218,7 @@
       <div class="login">
         <button 
           class="btn btn-outline"
+          onclick="window.location.href='./login.php';"
         >Log in</button>
       </div>
     </div>

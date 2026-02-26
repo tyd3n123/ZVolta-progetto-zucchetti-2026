@@ -13,6 +13,37 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+   flex-direction: column;
+  margin: 0;
+}
+
+.navbar {
+  position: fixed;
+  top: 20px;
+  left: 30px;
+  font-size: 20px;
+  color: white;
+  z-index: 100;
+}
+
+.navbar-home {
+  color: white;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.navbar-home:hover {
+  color: #ffffff;
+}
+
+.navbar-separator {
+  color: white;
+  margin: 0 10px;
+}
+
+.navbar-current {
+  color: #ffffff;
 }
 
 
