@@ -6,10 +6,10 @@
 // Per utilizzare il database in qualsiasi pagina, basta utilizzare questo comando:
 // require_once __DIR__ . "/../config/connessione.php"; --> il path cambia in base a dove vi trovate, se non sapete come fare scrivete a Pop
 
-$DB_HOST = "localhost";
+$DB_HOST = "127.0.0.1";
 $DB_USER = "root";    
 $DB_PASS = "";         
-$DB_NAME = "nomedb"; 
+$DB_NAME = "northstar"; 
 
 
 // 2) Crea connessione
