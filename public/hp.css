@@ -18,7 +18,6 @@ body {
   padding: 0 24px;
 }
 
-/* Header */
 .header {
   position: fixed;
   top: 0;
@@ -44,7 +43,7 @@ body {
   margin-left: -200px;
 }
 
-.s1 button, .s2 button, .s3 button, .s4 button {
+.s4 button {
   background: white;
   color: #1a1a2e;
   border: 1px solid #e5e7eb;
@@ -70,15 +69,10 @@ body {
   transition: opacity 1.5s ease, visibility 0.1s;
 }
 
-.s1:hover .dropdown-content,
-.s2:hover .dropdown-content,
-.s3:hover .dropdown-content,
 .s4:hover .dropdown-content {
   visibility: visible;
   opacity: 1;
 }
-
-
 
 .link {
   color: #374151;
@@ -285,5 +279,12 @@ h1 {
 
   .hero-subtitle {
     font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 1441px) {
+
+  .h2 {
+    display: flex;
   }
 }
