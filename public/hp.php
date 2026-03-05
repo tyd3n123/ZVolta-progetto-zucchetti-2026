@@ -187,31 +187,16 @@
         <h2>NorthStar</h2>
       </div>
 
-      <div class="s1">
-        <button>Come funziona</button>
-        <div class="dropdown-content">
-          <p>ciao1</p>
-        </div>
-      </div>
-
-      <div class="s2">
-        <button>Sedi</button>
-        <div class="dropdown-content">
-          <p>ciao2</p>
-        </div>
-      </div>
-
-      <div class="s3">
-        <button>Per Business</button>
-        <div class="dropdown-content">
-          <p>ciao3</p>
-        </div>
-      </div>
-
       <div class="s4">
-        <button>Supporto</button>
+        <button>Chi siamo</button>
         <div class="dropdown-content">
-          <p>ciao4</p>
+          <p>L'azienda Z-Volta: NorthStar è una società leader nel settore della gestione di parcheggi, uffici e sale riunioni, 
+          offrendo soluzioni innovative e personalizzate per soddisfare le esigenze di ogni cliente. <br>
+         Componenti del team: <br>
+         Admin: C4r7a Ma77I4 <br>
+         Coordinatori: Gaba Ares <br>
+         Dipendenti: Pop Darius, Herrera Prado Francesco, Gucci Filippo, Cesarini Michel, Vitali Miguel
+        </p>
         </div>
       </div>
 
