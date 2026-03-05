@@ -80,7 +80,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 <body>
     <div class="login-container">
-      <h1>Z VOLTA</h1>
+      <h1>Northstar</h1>
       
       <?php 
       if(!empty($messaggio)) echo $messaggio;
