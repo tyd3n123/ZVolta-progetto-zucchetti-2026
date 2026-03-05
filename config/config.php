@@ -2,6 +2,8 @@
 
 // Per testare in localhost utilizzare : " php -S localhost:8000 -t public "
 
+// Con XAMPP se non funziona, utilizzare il seguente comando: " C:\xampp\php\php.exe -S localhost:8000 -t public"
+
 // Per far funzionare il tutto dobbiamo inserire le credenziali corrette in modo tale che tutti possano accedere al database
 // Per utilizzare il database in qualsiasi pagina, basta utilizzare questo comando:
 // require_once __DIR__ . "/../config/connessione.php"; --> il path cambia in base a dove vi trovate, se non sapete come fare scrivete a Pop
@@ -10,10 +12,11 @@ $DB_HOST = "127.0.0.1";
 $DB_USER = "root";    
 $DB_PASS = "";         
 $DB_NAME = "northstar"; 
+$PORT = 3306;
 
 
 // 2) Crea connessione
-$conn = new mysqli($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME);
+$conn = new mysqli($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME, $PORT);
 
 // 3) Gestione errore
 if ($conn->connect_error) {
