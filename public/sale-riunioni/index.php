@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . "/../config/config.php";
+require_once __DIR__ . "/../../config/config.php";
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -7,7 +7,7 @@ require_once __DIR__ . "/../config/config.php";
   <meta charset="UTF-8">
   <title>Sale Riunioni | Z Volta</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="sale-riunioni.css">
+  <link rel="stylesheet" href="./sale-riunioni.css">
   <style>
     body {
       background-color: #7A288A;
