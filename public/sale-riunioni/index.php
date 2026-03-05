@@ -44,6 +44,91 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && isset($_
         $stmt->close();
     }
 }
+
+// Handle booking submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'book') {
+    $id_asset = $_POST['id_asset'];
+    $data_inizio = $_POST['data_inizio'];
+    $data_fine = $_POST['data_fine'];
+    
+    if (isset($_SESSION['id_utente']) && $id_asset && $data_inizio && $data_fine) {
+        // Insert booking into prenotazioni table
+        $sql = "INSERT INTO prenotazioni (id_utente, id_asset, data_inizio, data_fine) VALUES (?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        
+        if ($stmt) {
+            $stmt->bind_param("iiss", $_SESSION['id_utente'], $id_asset, $data_inizio, $data_fine);
+            
+            if ($stmt->execute()) {
+                // Update asset status to 'Occupato'
+                $update_sql = "UPDATE asset SET stato = 'Occupato' WHERE id_asset = ?";
+                $update_stmt = $conn->prepare($update_sql);
+                
+                if ($update_stmt) {
+                    $update_stmt->bind_param("i", $id_asset);
+                    $update_stmt->execute();
+                    $update_stmt->close();
+                }
+                
+                // Redirect to avoid form resubmission
+                header("Location: " . $_SERVER['PHP_SELF'] . "?success=1");
+                exit();
+            }
+            $stmt->close();
+        }
+    }
+}
+
+// Fetch room details from database
+$roomDetails = [];
+$sql = "SELECT id_asset, capacita, attrezzatura, orario_apertura, orario_chiusura FROM sala_dettagli";
+$result = $conn->query($sql);
+
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $roomDetails[$row['id_asset']] = [
+            'capacita' => $row['capacita'],
+            'attrezzatura' => $row['attrezzatura'],
+            'disponibilita' => $row['orario_apertura'] . ' - ' . $row['orario_chiusura']
+        ];
+    }
+}
+
+// Fetch user's active bookings
+$userBookings = [];
+if (isset($_SESSION['id_utente'])) {
+    $sql = "SELECT p.id_prenotazione, p.data_inizio, p.data_fine, a.codice_asset 
+            FROM prenotazioni p 
+            JOIN asset a ON p.id_asset = a.id_asset 
+            WHERE p.id_utente = ? 
+            ORDER BY p.data_inizio DESC";
+    $stmt = $conn->prepare($sql);
+    
+    if ($stmt) {
+        $stmt->bind_param("i", $_SESSION['id_utente']);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        while ($row = $result->fetch_assoc()) {
+            $userBookings[] = $row;
+        }
+        $stmt->close();
+    }
+}
+
+// Fetch room names and status from asset table
+$roomNames = [];
+$sql = "SELECT id_asset, codice_asset, stato FROM asset";
+$result = $conn->query($sql);
+
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $roomNames[$row['id_asset']] = [
+            'name' => $row['codice_asset'],
+            'status' => $row['stato']
+        ];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -75,29 +160,34 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && isset($_
     <div class="column">
       <h2>Prenotazione Sala Riunioni</h2>
       
-      <div class="form-group">
-        <label for="select-room">Seleziona Sala Riunioni:</label>
-        <select id="select-room">
-          <option>-- Scegli una sala --</option>
-          <option>Sala Riunioni A</option>
-          <option>Sala Riunioni B</option>
-          <option>Sala Riunioni C</option>
-          <option>Sala Riunioni D</option>
-          <option>Sala Riunioni E</option>
-        </select>
-      </div>
+      <form method="POST" id="booking-form">
+        <input type="hidden" name="action" value="book">
+        <input type="hidden" name="id_asset" id="hidden-id-asset">
+        <input type="hidden" name="data_inizio" id="hidden-data-inizio">
+        <input type="hidden" name="data_fine" id="hidden-data-fine">
+        
+        <div class="form-group">
+          <label for="select-room">Seleziona Sala Riunioni:</label>
+          <select id="select-room">
+            <option>-- Scegli una sala --</option>
+            <?php foreach ($roomNames as $id => $room): ?>
+              <option value="<?php echo $id; ?>"><?php echo htmlspecialchars($room['name']); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
 
-      <div class="form-group">
-        <label for="start-datetime">Data e Ora Inizio:</label>
-        <input type="datetime-local" id="start-datetime">
-      </div>
+        <div class="form-group">
+          <label for="start-datetime">Data e Ora Inizio:</label>
+          <input type="datetime-local" id="start-datetime">
+        </div>
 
-      <div class="form-group">
-        <label for="end-datetime">Data e Ora Fine:</label>
-        <input type="datetime-local" id="end-datetime">
-      </div>
+        <div class="form-group">
+          <label for="end-datetime">Data e Ora Fine:</label>
+          <input type="datetime-local" id="end-datetime">
+        </div>
 
-      <button class="book-btn">Effettua Prenotazione</button>
+        <button type="submit" class="book-btn">Effettua Prenotazione</button>
+      </form>
     </div>
 
     <div class="column">
@@ -112,44 +202,36 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && isset($_
 
       <h2>Le tue prenotazioni attive</h2>
       <div class="booking-list">
-        <p>Nessuna prenotazione attiva.</p>
+        <?php if (empty($userBookings)): ?>
+          <p>Nessuna prenotazione attiva.</p>
+        <?php else: ?>
+          <?php foreach ($userBookings as $booking): ?>
+            <div class="booking-item">
+              <h4><?php echo htmlspecialchars($booking['codice_asset']); ?></h4>
+              <p><strong>Inizio:</strong> <?php echo date('d/m/Y H:i', strtotime($booking['data_inizio'])); ?></p>
+              <p><strong>Fine:</strong> <?php echo date('d/m/Y H:i', strtotime($booking['data_fine'])); ?></p>
+            </div>
+          <?php endforeach; ?>
+        <?php endif; ?>
       </div>
 
       <h2>Elenco Sale Riunioni</h2>
       <table class="parking-table">
         <thead>
           <tr>
-            <th>Codice</th>
-            <th>Descrizione</th>
+            <th>ID Asset</th>
+            <th>Nome Sala</th>
             <th>Stato</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>SR001</td>
-            <td>Sala Riunioni A</td>
-            <td><span class="status-badge disponibile">Disponibile</span></td>
-          </tr>
-          <tr>
-            <td>SR002</td>
-            <td>Sala Riunioni B</td>
-            <td><span class="status-badge disponibile">Disponibile</span></td>
-          </tr>
-          <tr>
-            <td>SR003</td>
-            <td>Sala Riunioni C</td>
-            <td><span class="status-badge occupato">Occupato</span></td>
-          </tr>
-          <tr>
-            <td>SR004</td>
-            <td>Sala Riunioni D</td>
-            <td><span class="status-badge occupato">Occupato</span></td>
-          </tr>
-          <tr>
-            <td>SR005</td>
-            <td>Sala Riunioni E</td>
-            <td><span class="status-badge disponibile">Disponibile</span></td>
-          </tr>
+          <?php foreach ($roomNames as $id => $room): ?>
+            <tr>
+              <td><?php echo $id; ?></td>
+              <td><?php echo htmlspecialchars($room['name']); ?></td>
+              <td><span class="status-badge <?php echo strtolower($room['status']); ?>"><?php echo htmlspecialchars($room['status']); ?></span></td>
+            </tr>
+          <?php endforeach; ?>
         </tbody>
       </table>
 
@@ -158,25 +240,22 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && isset($_
   </div>
 
   <script>
+    // Pass PHP data to JavaScript
+    const roomDetails = <?php echo json_encode($roomDetails); ?>;
+    const roomNames = <?php echo json_encode($roomNames); ?>;
+    
     document.getElementById('select-room').addEventListener('change', function() {
       const selectedRoom = this.value;
       const detailsCard = document.querySelector('.details-card');
       
-      if (selectedRoom !== '-- Scegli una sala --') {
-        const roomData = {
-          'Sala Riunioni A': { capacità: '10 persone', attrezzatura: 'Proiettore, Lavagna, Videochiamata', disponibilità: '09:00 - 18:00' },
-          'Sala Riunioni B': { capacità: '8 persone', attrezzatura: 'Schermo, Whiteboard', disponibilità: '09:00 - 18:00' },
-          'Sala Riunioni C': { capacità: '15 persone', attrezzatura: 'Proiettore, Sistema audio', disponibilità: '09:00 - 18:00' },
-          'Sala Riunioni D': { capacità: '6 persone', attrezzatura: 'Monitor, Videochiamata', disponibilità: '09:00 - 18:00' },
-          'Sala Riunioni E': { capacità: '20 persone', attrezzatura: 'Proiettore, Lavagna, Sistema audio', disponibilità: '09:00 - 18:00' }
-        };
-        
-        const data = roomData[selectedRoom];
+      if (selectedRoom !== '-- Scegli una sala --' && roomDetails[selectedRoom]) {
+        const data = roomDetails[selectedRoom];
+        const roomName = roomNames[selectedRoom]?.name || 'Sala ' + selectedRoom;
         detailsCard.innerHTML = `
-          <h4>Sala selezionata: ${selectedRoom}</h4>
-          <p>Capacità: ${data.capacità}</p>
+          <h4>Sala selezionata: ${roomName}</h4>
+          <p>Capacità: ${data.capacita}</p>
           <p>Attrezzatura: ${data.attrezzatura}</p>
-          <p>Disponibilità: ${data.disponibilità}</p>
+          <p>Disponibilità: ${data.disponibilita}</p>
         `;
       } else {
         detailsCard.innerHTML = `
@@ -188,7 +267,10 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && isset($_
       }
     });
 
-    document.querySelector('.book-btn').addEventListener('click', function() {
+    // Handle form submission
+    document.getElementById('booking-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
       const room = document.getElementById('select-room').value;
       const start = document.getElementById('start-datetime').value;
       const end = document.getElementById('end-datetime').value;
@@ -198,26 +280,13 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && isset($_
         return;
       }
       
-      const bookingList = document.querySelector('.booking-list');
-      const newBooking = `
-        <div style="background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #667eea;">
-          <h4 style="margin-bottom: 8px;">${room}</h4>
-          <p style="margin: 4px 0; font-size: 14px;">Inizio: ${new Date(start).toLocaleString('it-IT')}</p>
-          <p style="margin: 4px 0; font-size: 14px;">Fine: ${new Date(end).toLocaleString('it-IT')}</p>
-        </div>
-      `;
+      // Set hidden fields
+      document.getElementById('hidden-id-asset').value = room;
+      document.getElementById('hidden-data-inizio').value = start;
+      document.getElementById('hidden-data-fine').value = end;
       
-      if (bookingList.innerHTML.includes('Nessuna prenotazione attiva.')) {
-        bookingList.innerHTML = newBooking;
-      } else {
-        bookingList.innerHTML += newBooking;
-      }
-      
-      // Reset form
-      document.getElementById('select-room').value = '-- Scegli una sala --';
-      document.getElementById('start-datetime').value = '';
-      document.getElementById('end-datetime').value = '';
-      document.getElementById('select-room').dispatchEvent(new Event('change'));
+      // Submit form
+      this.submit();
     });
   </script>
 </body>
