@@ -98,13 +98,13 @@ if($user["username"] === $username && $user["password"] === $password) {
     // Clear CAPTCHA after successful login
     unset($_SESSION['text_captcha']);
     
-    header("Location: ../dashboard/index.php");
+    header("Location: ../check-user.php");
     exit();
 } else {
     $_SESSION["login_error"] = "Username o password errati";
     // Rigenera il codice dopo un tentativo fallito
     $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     $_SESSION['text_captcha'] = substr(str_shuffle($chars), 0, 5);
-    header("Location: ../dashboard/index.php");
+    header("Location: ../check-user.php");
     exit();
 }
