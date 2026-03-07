@@ -6,9 +6,11 @@
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: #f8f9fc;
+  background: url('assets/BackGround1.png') no-repeat center center fixed;
+  background-size: cover;
   color: #1a1a2e;
   line-height: 1.5;
+  
 }
 
 .container {
