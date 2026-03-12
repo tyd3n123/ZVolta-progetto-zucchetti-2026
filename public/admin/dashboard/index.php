@@ -113,6 +113,21 @@ if ($result) {
         $allBookings[] = $row;
     }
 }
+
+// Fetch employees list for user management
+$employees = [];
+$sql = "SELECT u.nome, u.cognome, r.nome_ruolo as ruolo 
+        FROM utenti u 
+        JOIN ruoli r ON u.id_ruolo = r.id_ruolo 
+        WHERE r.nome_ruolo = 'Dipendente'
+        ORDER BY u.cognome, u.nome";
+$result = $conn->query($sql);
+
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $employees[] = $row;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -192,46 +207,157 @@ if ($result) {
       </div>
     </div>
 
-    <div class="column">
-      <h2>Le tue prenotazioni</h2>
-      
-      <div class="booking-list">
-        <?php if (empty($userBookings)): ?>
-          <p>Nessuna prenotazione disponibile</p>
-        <?php else: ?>
-          <?php foreach ($userBookings as $booking): ?>
-            <div class="booking-item">
-              <h4><?php echo htmlspecialchars($booking['codice_asset']); ?></h4>
-              <p><strong>Inizio:</strong> <?php echo date('d/m/Y H:i', strtotime($booking['data_inizio'])); ?></p>
-              <p><strong>Fine:</strong> <?php echo date('d/m/Y H:i', strtotime($booking['data_fine'])); ?></p>
-            </div>
-          <?php endforeach; ?>
-        <?php endif; ?>
+    <div class="bookings-section">
+      <div class="bookings-row">
+        <div class="bookings-column">
+          <h2>Le tue prenotazioni</h2>
+          
+          <div class="booking-list">
+            <?php if (empty($userBookings)): ?>
+              <p>Nessuna prenotazione disponibile</p>
+            <?php else: ?>
+              <?php foreach ($userBookings as $booking): ?>
+                <div class="booking-item">
+                  <h4><?php echo htmlspecialchars($booking['codice_asset']); ?></h4>
+                  <p><strong>Inizio:</strong> <?php echo date('d/m/Y H:i', strtotime($booking['data_inizio'])); ?></p>
+                  <p><strong>Fine:</strong> <?php echo date('d/m/Y H:i', strtotime($booking['data_fine'])); ?></p>
+                </div>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </div>
+
+          <button class="show-more-btn" onclick="openUserBookingsModal()">Mostra di più</button>
+        </div>
+
+        <div class="bookings-column">
+          <h2>Tutte le prenotazioni</h2>
+          
+          <div class="booking-list">
+            <?php if (empty($allBookings)): ?>
+              <p>Nessuna prenotazione presente</p>
+            <?php else: ?>
+              <?php foreach ($allBookings as $booking): ?>
+                <div class="booking-item">
+                  <h4><?php echo htmlspecialchars($booking['codice_asset']); ?></h4>
+                  <p><strong>Utente:</strong> <?php echo htmlspecialchars($booking['nome'] . ' ' . $booking['cognome']); ?> (<?php echo htmlspecialchars($booking['nome_ruolo']); ?>)</p>
+                  <p><strong>Inizio:</strong> <?php echo date('d/m/Y H:i', strtotime($booking['data_inizio'])); ?></p>
+                  <p><strong>Fine:</strong> <?php echo date('d/m/Y H:i', strtotime($booking['data_fine'])); ?></p>
+                </div>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </div>
+
+          <button class="show-more-btn" onclick="openGestionePrenotazioni()">Gestisci prenotazioni</button>
+        </div>
+
+        <div class="bookings-column small">
+          <h2>Gestisci Utenti</h2>
+          
+          <div class="employees-list">
+            <?php if (empty($employees)): ?>
+              <p class="no-employees">Nessun dipendente presente</p>
+            <?php else: ?>
+              <?php foreach ($employees as $employee): ?>
+                <div class="employee-item">
+                  <div class="employee-info">
+                    <h4><?php echo htmlspecialchars($employee['nome'] . ' ' . $employee['cognome']); ?></h4>
+                    <p class="employee-role"><?php echo htmlspecialchars($employee['ruolo']); ?></p>
+                  </div>
+                  <div class="employee-actions">
+                    <button class="employee-btn" onclick="manageEmployee('<?php echo htmlspecialchars($employee['nome'] . ' ' . $employee['cognome']); ?>')">Gestisci</button>
+                  </div>
+                </div>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </div>
+        </div>
       </div>
-
-      <button class="show-more-btn">Mostra di più</button>
-    </div>
-
-    <div class="column">
-      <h2>Tutte le prenotazioni</h2>
-      
-      <div class="booking-list">
-        <?php if (empty($allBookings)): ?>
-          <p>Nessuna prenotazione presente</p>
-        <?php else: ?>
-          <?php foreach ($allBookings as $booking): ?>
-            <div class="booking-item">
-              <h4><?php echo htmlspecialchars($booking['codice_asset']); ?></h4>
-              <p><strong>Utente:</strong> <?php echo htmlspecialchars($booking['nome'] . ' ' . $booking['cognome']); ?> (<?php echo htmlspecialchars($booking['nome_ruolo']); ?>)</p>
-              <p><strong>Inizio:</strong> <?php echo date('d/m/Y H:i', strtotime($booking['data_inizio'])); ?></p>
-              <p><strong>Fine:</strong> <?php echo date('d/m/Y H:i', strtotime($booking['data_fine'])); ?></p>
-            </div>
-          <?php endforeach; ?>
-        <?php endif; ?>
-      </div>
-
-      <button class="show-more-btn">Mostra di più</button>
     </div>
   </div>
+
+  <!-- Modal Container for User Bookings -->
+  <div id="user-bookings-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-container">
+      <!-- Content will be loaded here -->
+    </div>
+  </div>
+
+  <!-- Modal Container for All Bookings -->
+  <div id="gestione-prenotazioni-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-container">
+      <!-- Content will be loaded here -->
+    </div>
+  </div>
+
+  <script>
+    function openUserBookingsModal() {
+      const modal = document.getElementById('user-bookings-modal');
+      const container = modal.querySelector('.modal-container');
+      
+      // Show modal
+      modal.style.display = 'flex';
+      
+      // Load content
+      fetch('modali/user-bookings-modal.php')
+        .then(response => response.text())
+        .then(html => {
+          container.innerHTML = html;
+        })
+        .catch(error => {
+          console.error('Error loading modal content:', error);
+          container.innerHTML = '<div class="error-message">Errore nel caricamento del contenuto</div>';
+        });
+    }
+    
+    function closeUserBookingsModal() {
+      const modal = document.getElementById('user-bookings-modal');
+      modal.style.display = 'none';
+    }
+    
+    function openGestionePrenotazioni() {
+      const modal = document.getElementById('gestione-prenotazioni-modal');
+      const container = modal.querySelector('.modal-container');
+      
+      // Show modal
+      modal.style.display = 'flex';
+      
+      // Load content
+      fetch('modali/gestione-prenotazioni-modal.php')
+        .then(response => response.text())
+        .then(html => {
+          container.innerHTML = html;
+        })
+        .catch(error => {
+          console.error('Error loading modal content:', error);
+          container.innerHTML = '<div class="error-message">Errore nel caricamento del contenuto</div>';
+        });
+    }
+    
+    function manageEmployee(employeeName) {
+      // TODO: Implement employee management modal
+      alert(`Gestione dipendente: ${employeeName}`);
+    }
+    
+    function closeModal() {
+      const modals = document.querySelectorAll('.modal-overlay');
+      modals.forEach(modal => {
+        modal.style.display = 'none';
+      });
+    }
+    
+    // Close modal when clicking outside
+    document.addEventListener('click', function(event) {
+      if (event.target.classList.contains('modal-overlay')) {
+        closeModal();
+      }
+    });
+    
+    // Close modal with ESC key
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        closeModal();
+      }
+    });
+  </script>
 </body>
 </html>

@@ -82,6 +82,19 @@ body {
     margin: 0 auto;
 }
 
+.dashboard-container .column {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    padding: 30px;
+    backdrop-filter: blur(10px);
+}
+
+.dashboard-container .bookings-section {
+    flex: 1;
+}
+
 .booking-card {
     background: rgba(255, 255, 255, 0.95);
     border-radius: 12px;
@@ -134,15 +147,6 @@ body {
 .card-content .book-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-}
-
-.column {
-    flex: 1;
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-    padding: 30px;
-    backdrop-filter: blur(10px);
 }
 
 .column h2 {
@@ -300,7 +304,7 @@ body {
 
 .welcome-section h2 {
     margin: 0;
-    color: #333;
+    color: #ffffff;
     font-size: 1.8rem;
     font-weight: 600;
 }
@@ -336,7 +340,8 @@ body {
     gap: 20px;
     padding: 20px;
     overflow-x: auto;
-    margin-bottom: 20px;
+    margin: 20px auto;
+    max-width: 1200px;
 }
 
 .analytics-card {
@@ -384,5 +389,525 @@ body {
 
     .analytics-card {
         min-width: 100%;
+    }
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-overlay .modal-container {
+    background: white;
+    border-radius: 12px;
+    max-width: 90%;
+    max-height: 90%;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-overlay .modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-overlay .modal-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.modal-overlay .modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.3s ease;
+}
+
+.modal-overlay .modal-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.modal-overlay .modal-body {
+    padding: 30px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.modal-overlay .bookings-table-container {
+    overflow-x: auto;
+}
+
+.modal-overlay .bookings-table {
+    width: 100%;
+    min-width: 800px;
+    border-collapse: collapse;
+}
+
+.modal-overlay .bookings-table th,
+.modal-overlay .bookings-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-overlay .bookings-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+    position: sticky;
+    top: 0;
+}
+
+.modal-overlay .bookings-table tr:hover {
+    background: #f8f9fa;
+}
+
+.modal-overlay .edit-row {
+    background: #f8f9fa;
+}
+
+.modal-overlay .edit-form {
+    padding: 20px;
+}
+
+.modal-overlay .edit-form h4 {
+    margin: 0 0 15px 0;
+    color: #333;
+}
+
+.modal-overlay .form-group {
+    margin-bottom: 15px;
+}
+
+.modal-overlay .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #333;
+}
+
+.modal-overlay .form-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.modal-overlay .form-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.modal-overlay .btn-save {
+    background: #28a745;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.modal-overlay .btn-cancel {
+    background: #6c757d;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.modal-overlay .action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.modal-overlay .btn-edit {
+    background: #007bff;
+    color: white;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.modal-overlay .btn-delete {
+    background: #dc3545;
+    color: white;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.modal-overlay .user-badge {
+    background: #e9ecef;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    margin-left: 5px;
+}
+
+.modal-overlay .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.modal-overlay .error-message {
+    text-align: center;
+    padding: 40px;
+    color: #dc3545;
+    font-weight: 500;
+}
+
+/* Bookings Section Layout */
+.bookings-section {
+    margin-top: 20px;
+}
+
+.bookings-row {
+    display: flex;
+    gap: 20px;
+    flex-direction: column;
+}
+
+.bookings-column {
+    flex: 1;
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    min-height: 400px;
+}
+
+.bookings-column.small {
+    flex: 0.8;
+}
+
+.bookings-column h2 {
+    margin: 0 0 20px 0;
+    color: #333;
+    font-size: 1.3rem;
+    font-weight: 600;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 10px;
+}
+
+/* User Management Styles */
+.user-management-card {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.employees-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.employee-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 15px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+    margin-bottom: 10px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.employee-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.employee-info h4 {
+    margin: 0 0 5px 0;
+    color: #333;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.employee-role {
+    margin: 0;
+    color: #666;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.employee-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.3s ease;
+}
+
+.employee-btn:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+.no-employees {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 20px;
+}
+
+.management-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.management-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.management-icon {
+    font-size: 2rem;
+    margin-right: 15px;
+}
+
+.management-content {
+    flex: 1;
+}
+
+.management-content h4 {
+    margin: 0 0 5px 0;
+    color: #333;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.management-count {
+    margin: 0 0 10px 0;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #667eea;
+}
+
+.management-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.3s ease;
+}
+
+.management-btn:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+/* Responsive adjustments for bookings layout */
+@media (max-width: 1024px) {
+    .bookings-row {
+        flex-direction: column;
+    }
+    
+    .bookings-column.small {
+        flex: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .bookings-column {
+        padding: 15px;
+        min-height: auto;
+    }
+    
+    .management-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+    }
+    
+    .management-icon {
+        margin-right: 0;
+        margin-bottom: 5px;
+    }
+}
+
+/* Responsive adjustments for modal */
+@media (max-width: 768px) {
+    .modal-overlay .modal-container {
+        max-width: 95%;
+        max-height: 95%;
+    }
+    
+    .modal-overlay .modal-body {
+        padding: 20px;
+    }
+    
+    .modal-overlay .bookings-table {
+        min-width: 600px;
+    }
+}
+
+/* User Bookings Modal Styles */
+.modal-overlay .bookings-list-container {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.modal-overlay .booking-item-detail {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.modal-overlay .booking-item-detail:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.modal-overlay .booking-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.modal-overlay .booking-header h4 {
+    margin: 0;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.modal-overlay .booking-id {
+    background: #667eea;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.modal-overlay .booking-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.modal-overlay .detail-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.modal-overlay .icon {
+    font-size: 1.2rem;
+    margin-top: 2px;
+}
+
+.modal-overlay .detail-item div {
+    flex: 1;
+}
+
+.modal-overlay .detail-item strong {
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.modal-overlay .detail-item div > span {
+    color: #333;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.modal-overlay .booking-actions {
+    display: flex;
+    gap: 10px;
+    padding-top: 15px;
+    border-top: 1px solid #e9ecef;
+}
+
+.modal-overlay .btn-modify {
+    background: #007bff;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.3s ease;
+}
+
+.modal-overlay .btn-modify:hover {
+    background: #0056b3;
+}
+
+.modal-overlay .btn-cancel {
+    background: #dc3545;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.3s ease;
+}
+
+.modal-overlay .btn-cancel:hover {
+    background: #c82333;
+}
+
+/* Responsive adjustments for user bookings */
+@media (max-width: 768px) {
+    .modal-overlay .booking-details {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-overlay .booking-actions {
+        flex-direction: column;
+    }
+    
+    .modal-overlay .booking-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
     }
 }
