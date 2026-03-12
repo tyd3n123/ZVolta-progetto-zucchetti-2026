@@ -21,7 +21,8 @@
 
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: #f8f9fc;
+      background: url('assets/BackGround1.png') no-repeat center center fixed;
+      background-size: cover;
       color: #1a1a2e;
       line-height: 1.5;
     }
@@ -55,7 +56,10 @@
     .logo-text {
       font-size: 30px;
       font-weight: 600;
-      color: #6366f1;
+      background: linear-gradient(135deg, #ffad50 0%, #c0a9fd 99.9%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
       margin-left: -200px;
     }
 
@@ -65,7 +69,7 @@
       border: 1px solid #e5e7eb;
       padding: 12px 20px;
       border-radius: 8px;
-      font-weight: 500;
+      font-weight: 500; 
     }
 
     .dropdown-content {
@@ -118,10 +122,8 @@
       display: none;
     }
 
-    /* Hero */
     .hero {
       min-height: 100vh;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
       display: flex;
       align-items: center;
@@ -139,6 +141,8 @@
       line-height: 1.05;
       margin-bottom: 1.2rem;
       animation: fadeIn 1.5s ease-in forwards;
+      color: #ffffff;
+      text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
     }
 
     @keyframes fadeIn {
@@ -152,6 +156,8 @@
       line-height: 1.05;
       margin-bottom: 1.2rem;
       animation: fadeIn 3s ease-in forwards;
+      color: #ffffff;
+      text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
     }
 
     /* Responsive */
@@ -181,7 +187,6 @@
 
   <header class="header">
     <div class="container header-inner">
-      <button class="menu-toggle" aria-label="Open menu">☰</button>
 
       <div class="logo-text">
         <h2>NorthStar</h2>
@@ -193,7 +198,7 @@
           <p>L'azienda Z-Volta: NorthStar è una società leader nel settore della gestione di parcheggi, uffici e sale riunioni, 
           offrendo soluzioni innovative e personalizzate per soddisfare le esigenze di ogni cliente. <br>
          Componenti del team: <br>
-         Admin: C4r7a Ma77I4 <br>
+         Admin: Carta Mattia <br>
          Coordinatori: Gaba Ares <br>
          Dipendenti: Pop Darius, Herrera Prado Francesco, Gucci Filippo, Cesarini Michel, Vitali Miguel
         </p>
@@ -216,7 +221,7 @@
       <br>
       <p class="sottotitolo">
         Parcheggi, uffici e sale riunioni.<br>
-        Qualsiasi cosa voi abbiate bisogno, NorthStar ve lo può fornire.
+        Qualsiasi cosa voi dobbiate prenotare, NorthStar ve lo può riservare.
       </p>
     </div>
   </section>
