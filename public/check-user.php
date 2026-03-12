@@ -20,9 +20,9 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true && isset($_
             $user = $result->fetch_assoc();
             $userRole = strtolower($user['nome_ruolo']);
             
-            // Redirect based on user role
+            // Redirect based on user rol
             switch ($userRole) {
-                case 'Admin':
+                case 'admin':
                     header("Location: ../admin/dashboard/index.php");
                     break;
                 case 'Coordinatore':
