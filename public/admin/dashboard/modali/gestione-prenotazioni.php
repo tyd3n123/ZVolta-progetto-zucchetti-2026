@@ -216,7 +216,7 @@ if ($result) {
         
         function deleteBooking(id) {
             if (confirm('Sei sicuro di voler eliminare questa prenotazione?')) {
-                fetch('gestione-prenotazioni.php', {
+                fetch('elimina-prenotazioni.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -229,7 +229,7 @@ if ($result) {
                         alert('Prenotazione eliminata con successo');
                         location.reload();
                     } else {
-                        alert('Errore durante l\'eliminazione');
+                        alert('Errore durante l\'eliminazione: ' + (data.message || 'Errore sconosciuto'));
                     }
                 })
                 .catch(error => {

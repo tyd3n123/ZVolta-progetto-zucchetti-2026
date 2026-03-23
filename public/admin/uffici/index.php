@@ -26,12 +26,11 @@ $stmt->close();
 $feedback = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'book') {
-    $id_asset     = (int)($_POST['id_asset']     ?? 0);
-    $data_inizio  = $_POST['data_inizio']  ?? '';
-    $data_fine    = $_POST['data_fine']    ?? '';
-    $tipo_veicolo = trim($_POST['tipo_veicolo'] ?? '');
+    $id_asset    = (int)($_POST['id_asset']    ?? 0);
+    $data_inizio = $_POST['data_inizio'] ?? '';
+    $data_fine   = $_POST['data_fine']   ?? '';
 
-    if (!$id_asset || !$data_inizio || !$data_fine || !$tipo_veicolo) {
+    if (!$id_asset || !$data_inizio || !$data_fine) {
         $feedback = ['type' => 'error', 'msg' => 'Compila tutti i campi prima di procedere.'];
     } elseif (strtotime($data_fine) <= strtotime($data_inizio)) {
         $feedback = ['type' => 'error', 'msg' => 'La data di fine deve essere successiva alla data di inizio.'];
@@ -48,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'book'
         $stmt->close();
 
         if ($overlap > 0) {
-            $feedback = ['type' => 'error', 'msg' => 'Il parcheggio è già occupato nel periodo selezionato.'];
+            $feedback = ['type' => 'error', 'msg' => "L'ufficio è già occupato nel periodo selezionato."];
         } else {
             try {
                 $conn->begin_transaction();
@@ -67,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'book'
                 $stmt->close();
 
                 $conn->commit();
-                $feedback = ['type' => 'success', 'msg' => 'Parcheggio prenotato con successo!'];
+                $feedback = ['type' => 'success', 'msg' => 'Ufficio prenotato con successo!'];
 
             } catch (Exception $e) {
                 $conn->rollback();
@@ -77,32 +76,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'book'
     }
 }
 
-// ── Fetch parcheggi (categoria = 'Parcheggio') ────────
-$parkingSpots = []; // id_asset => [name, status, capacita, ...]
+// ── Fetch uffici ──────────────────────────────────────
+$officeSpots = []; // id_asset => [name, status, ...]
 $sql = "SELECT a.id_asset, a.codice_asset, a.stato,
-               COALESCE(p.numero_posto, '-')          AS numero_posto,
-               COALESCE(p.coperto, '-')               AS coperto,
-               COALESCE(p.colonnina_elettrica, '-')   AS colonnina_elettrica,
-               COALESCE(p.posizione, '-')             AS posizione
+               COALESCE(u.numero_ufficio, '-')   AS numero_ufficio,
+               COALESCE(u.piano, '-')            AS piano,
+               COALESCE(u.capacita, '-')         AS capacita,
+               COALESCE(u.telefono_interno, '-') AS telefono_interno
         FROM asset a
-        LEFT JOIN parcheggio_dettagli p ON p.id_asset = a.id_asset
-        WHERE a.mappa = 'Parcheggio'
+        LEFT JOIN ufficio_dettagli u ON u.id_asset = a.id_asset
+        WHERE a.mappa = 'Sede' AND a.codice_asset LIKE 'Ufficio%'
         ORDER BY a.codice_asset";
 $result = $conn->query($sql);
 if ($result) {
     while ($row = $result->fetch_assoc()) {
-        $parkingSpots[$row['id_asset']] = [
-            'name'                 => $row['codice_asset'],
-            'status'               => $row['stato'],
-            'numero_posto'         => $row['numero_posto'],
-            'coperto'              => $row['coperto'],
-            'colonnina_elettrica'  => $row['colonnina_elettrica'],
-            'posizione'            => $row['posizione'],
+        $officeSpots[$row['id_asset']] = [
+            'name'             => $row['codice_asset'],
+            'status'           => $row['stato'],
+            'numero_ufficio'   => $row['numero_ufficio'],
+            'piano'            => $row['piano'],
+            'capacita'         => $row['capacita'],
+            'telefono_interno' => $row['telefono_interno'],
         ];
     }
 }
 
-// ── Fetch prenotazioni attive dell'utente (parcheggi) ─
+// ── Fetch prenotazioni attive dell'utente (uffici) ────
 $userBookings = [];
 $stmt = $conn->prepare(
     "SELECT p.id_prenotazione, p.data_inizio, p.data_fine,
@@ -110,7 +109,8 @@ $stmt = $conn->prepare(
      FROM prenotazioni p
      JOIN asset a ON p.id_asset = a.id_asset
      WHERE p.id_utente = ?
-       AND a.mappa = 'Parcheggio'
+       AND a.mappa = 'Sede'
+       AND a.codice_asset LIKE 'Ufficio%'
        AND p.data_fine >= NOW()
      ORDER BY p.data_inizio ASC"
 );
@@ -120,13 +120,14 @@ $result = $stmt->get_result();
 while ($row = $result->fetch_assoc()) $userBookings[] = $row;
 $stmt->close();
 
-// ── Fetch slot occupati per tutti i parcheggi ─────────
+// ── Fetch slot occupati per tutti gli uffici ──────────
 $occupiedSlotsByAsset = [];
 $result = $conn->query(
     "SELECT p.id_asset, p.data_inizio, p.data_fine
      FROM prenotazioni p
      JOIN asset a ON p.id_asset = a.id_asset
-     WHERE a.mappa = 'Parcheggio'
+     WHERE a.mappa = 'Sede'
+       AND a.codice_asset LIKE 'Ufficio%'
        AND p.data_fine >= NOW()
      ORDER BY p.data_inizio ASC"
 );
@@ -144,9 +145,9 @@ if ($result) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Parcheggi | Northstar</title>
+    <title>Uffici | Northstar</title>
     <link rel="stylesheet" href="../dashboard/dashboard.css">
-    <link rel="stylesheet" href="./parcheggi.css">
+    <link rel="stylesheet" href="./uffici.css">
 </head>
 <body>
 
@@ -157,92 +158,82 @@ if ($result) {
         <nav class="header-breadcrumb">
             <a href="../dashboard/index.php">Dashboard</a>
             <span class="bc-sep">/</span>
-            <span class="bc-current">Parcheggi</span>
+            <span class="bc-current">Uffici</span>
         </nav>
     </div>
-    <div class="pk-user-pill">
+    <div class="uf-user-pill">
         <?= htmlspecialchars($userInfo['nome'] . ' ' . $userInfo['cognome']) ?>
-        <span class="pk-role"><?= htmlspecialchars($userInfo['ruolo']) ?></span>
+        <span class="uf-role"><?= htmlspecialchars($userInfo['ruolo']) ?></span>
     </div>
 </header>
 
 <!-- ── Page ───────────────────────────────────────────── -->
-<div class="pk-page">
+<div class="uf-page">
 
     <!-- Title row -->
-    <div class="pk-title-row">
+    <div class="uf-title-row">
         <div>
-            <h2 class="pk-page-title">🚗 Parcheggi</h2>
-            <p class="pk-page-sub">Prenota un posto auto o moto per il periodo desiderato</p>
+            <h2 class="uf-page-title">🏢 Uffici</h2>
+            <p class="uf-page-sub">Prenota un ufficio per il periodo desiderato</p>
         </div>
     </div>
 
     <!-- Feedback banner -->
     <?php if ($feedback): ?>
-        <div class="pk-feedback pk-feedback--<?= $feedback['type'] ?>">
+        <div class="uf-feedback uf-feedback--<?= $feedback['type'] ?>">
             <?= $feedback['type'] === 'success' ? '✅' : '⚠️' ?>
             <?= htmlspecialchars($feedback['msg']) ?>
         </div>
     <?php endif; ?>
 
     <!-- Main grid -->
-    <div class="pk-grid">
+    <div class="uf-grid">
 
         <!-- ── LEFT: form prenotazione ─────────────────── -->
-        <div class="pk-panel">
-            <p class="pk-panel-title">Nuova Prenotazione</p>
+        <div class="uf-panel">
+            <p class="uf-panel-title">Nuova Prenotazione</p>
 
             <form method="POST" id="booking-form">
                 <input type="hidden" name="action" value="book">
 
-            <!-- Selezione parcheggio -->
-            <div class="pk-field">
-            <label for="select-parking">Parcheggio</label>
-            <select id="select-parking" name="id_asset" required onchange="onParkingChange(this)">
-                <option value="">— Seleziona un parcheggio —</option>
-                <?php foreach ($parkingSpots as $id => $spot): ?>
-                    <option value="<?= $id ?>"
-                            data-code="<?= htmlspecialchars($spot['name']) ?>"
-                            data-stato="<?= htmlspecialchars($spot['status']) ?>"
-                            data-numero-posto="<?= htmlspecialchars($spot['numero_posto']) ?>"
-                            data-coperto="<?= $spot['coperto'] ? 'Sì' : 'No' ?>"
-                            data-colonnina="<?= $spot['colonnina_elettrica'] ? 'Sì' : 'No' ?>"
-                            data-posizione="<?= htmlspecialchars($spot['posizione']) ?>"
-                            <?= (!empty($_POST['id_asset']) && $_POST['id_asset'] == $id) ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($spot['name']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            </div>
-
-                <!-- Tipo veicolo -->
-                <div class="pk-field">
-                    <label for="tipo-veicolo">Tipo Veicolo</label>
-                    <select id="tipo-veicolo" name="tipo_veicolo" required>
-                        <option value="">— Seleziona tipo —</option>
-                        <option value="Auto" <?= (($_POST['tipo_veicolo'] ?? '') === 'Auto') ? 'selected' : '' ?>>🚗 Auto</option>
-                        <option value="Moto" <?= (($_POST['tipo_veicolo'] ?? '') === 'Moto') ? 'selected' : '' ?>>🏍️ Moto</option>
+                <!-- Selezione ufficio -->
+                <div class="uf-field">
+                    <label for="select-office">Ufficio</label>
+                    <select id="select-office" name="id_asset" required onchange="onOfficeChange(this)">
+                        <option value="">— Seleziona un ufficio —</option>
+                        <?php foreach ($officeSpots as $id => $spot): ?>
+                            <option value="<?= $id ?>"
+                                    data-code="<?= htmlspecialchars($spot['name']) ?>"
+                                    data-stato="<?= htmlspecialchars($spot['status']) ?>"
+                                    data-numero="<?= htmlspecialchars($spot['numero_ufficio']) ?>"
+                                    data-piano="<?= htmlspecialchars($spot['piano']) ?>"
+                                    data-capacita="<?= htmlspecialchars($spot['capacita']) ?>"
+                                    data-telefono="<?= htmlspecialchars($spot['telefono_interno']) ?>"
+                                    <?= (!empty($_POST['id_asset']) && $_POST['id_asset'] == $id) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($spot['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
 
                 <!-- Detail card (visibile dopo selezione) -->
-                <div id="pk-detail-card" class="pk-detail-card" style="display:none;"></div>
+                <div id="uf-detail-card" class="uf-detail-card" style="display:none;"></div>
 
                 <!-- Slot occupati -->
-                <div id="pk-slots-section" class="pk-slots-section" style="display:none;">
-                    <p class="pk-slots-title">📅 Periodi già occupati</p>
-                    <div class="pk-slots-list" id="pk-slots-list"></div>
+                <div id="uf-slots-section" class="uf-slots-section" style="display:none;">
+                    <p class="uf-slots-title">📅 Periodi già occupati</p>
+                    <div class="uf-slots-list" id="uf-slots-list"></div>
                 </div>
 
                 <!-- Date -->
-                <div class="pk-fields-row">
-                    <div class="pk-field">
+                <div class="uf-fields-row">
+                    <div class="uf-field">
                         <label for="data-inizio">Data Inizio</label>
                         <input type="datetime-local" id="data-inizio" name="data_inizio"
                                value="<?= htmlspecialchars($_POST['data_inizio'] ?? '') ?>"
                                required onchange="updateDuration()">
                     </div>
-                    <div class="pk-field">
+                    <div class="uf-field">
                         <label for="data-fine">Data Fine</label>
                         <input type="datetime-local" id="data-fine" name="data_fine"
                                value="<?= htmlspecialchars($_POST['data_fine'] ?? '') ?>"
@@ -251,44 +242,44 @@ if ($result) {
                 </div>
 
                 <!-- Duration preview -->
-                <div id="pk-duration-preview" class="pk-duration-preview" style="display:none;">
-                    <span class="pk-duration-icon">⏱️</span>
-                    <span id="pk-duration-text"></span>
+                <div id="uf-duration-preview" class="uf-duration-preview" style="display:none;">
+                    <span class="uf-duration-icon">⏱️</span>
+                    <span id="uf-duration-text"></span>
                 </div>
 
                 <!-- Form error -->
-                <div id="pk-form-error" class="pk-form-error" style="display:none;"></div>
+                <div id="uf-form-error" class="uf-form-error" style="display:none;"></div>
 
-                <button type="submit" class="pk-submit-btn" id="submit-btn">
+                <button type="submit" class="uf-submit-btn" id="submit-btn">
                     Conferma Prenotazione
                 </button>
             </form>
         </div>
 
         <!-- ── RIGHT ───────────────────────────────────── -->
-        <div class="pk-right">
+        <div class="uf-right">
 
             <!-- Le tue prenotazioni attive -->
-            <div class="pk-panel">
-                <div class="pk-panel-header">
-                    <p class="pk-panel-title">Le tue prenotazioni attive</p>
-                    <span class="pk-count-badge"><?= count($userBookings) ?></span>
+            <div class="uf-panel">
+                <div class="uf-panel-header">
+                    <p class="uf-panel-title">Le tue prenotazioni attive</p>
+                    <span class="uf-count-badge"><?= count($userBookings) ?></span>
                 </div>
 
                 <?php if (empty($userBookings)): ?>
-                    <div class="pk-empty">
-                        <span>🅿️</span>
-                        <p>Nessuna prenotazione parcheggio attiva</p>
+                    <div class="uf-empty">
+                        <span>🏢</span>
+                        <p>Nessuna prenotazione ufficio attiva</p>
                     </div>
                 <?php else: ?>
-                    <div class="pk-bookings-list">
+                    <div class="uf-bookings-list">
                         <?php foreach ($userBookings as $b): ?>
                             <?php
                                 $start    = new DateTime($b['data_inizio']);
                                 $end      = new DateTime($b['data_fine']);
                                 $now      = new DateTime();
                                 $isActive = $start <= $now && $end >= $now;
-                                $statusClass = $isActive ? 'pk-status--now' : 'pk-status--future';
+                                $statusClass = $isActive ? 'uf-status--now' : 'uf-status--future';
                                 $statusLabel = $isActive ? 'In corso' : 'Programmato';
 
                                 $diff   = $start->diff($end);
@@ -296,15 +287,15 @@ if ($result) {
                                 $hours  = $diff->h;
                                 $durStr = $days > 0 ? "{$days}g {$hours}h" : "{$hours}h {$diff->i}m";
                             ?>
-                            <div class="pk-booking-item">
-                                <div class="pk-booking-top">
-                                    <span class="pk-asset-pill"><?= htmlspecialchars($b['codice_asset']) ?></span>
-                                    <span class="pk-status-pill <?= $statusClass ?>"><?= $statusLabel ?></span>
-                                    <span class="pk-dur"><?= $durStr ?></span>
+                            <div class="uf-booking-item">
+                                <div class="uf-booking-top">
+                                    <span class="uf-asset-pill"><?= htmlspecialchars($b['codice_asset']) ?></span>
+                                    <span class="uf-status-pill <?= $statusClass ?>"><?= $statusLabel ?></span>
+                                    <span class="uf-dur"><?= $durStr ?></span>
                                 </div>
-                                <div class="pk-booking-dates">
+                                <div class="uf-booking-dates">
                                     <?= date('d/m/Y H:i', strtotime($b['data_inizio'])) ?>
-                                    <span class="pk-arrow">→</span>
+                                    <span class="uf-arrow">→</span>
                                     <?= date('d/m/Y H:i', strtotime($b['data_fine'])) ?>
                                 </div>
                             </div>
@@ -313,79 +304,80 @@ if ($result) {
                 <?php endif; ?>
             </div>
 
-            <!-- Elenco parcheggi -->
-            <div class="pk-panel">
-                <div class="pk-panel-header">
-                    <p class="pk-panel-title">Elenco Parcheggi</p>
-                    <span class="pk-count-badge"><?= count($parkingSpots) ?></span>
+            <!-- Elenco uffici -->
+            <div class="uf-panel">
+                <div class="uf-panel-header">
+                    <p class="uf-panel-title">Elenco Uffici</p>
+                    <span class="uf-count-badge"><?= count($officeSpots) ?></span>
                 </div>
 
-                <?php if (empty($parkingSpots)): ?>
-                    <div class="pk-empty">
-                        <span>🅿️</span>
-                        <p>Nessun parcheggio disponibile</p>
+                <?php if (empty($officeSpots)): ?>
+                    <div class="uf-empty">
+                        <span>🏢</span>
+                        <p>Nessun ufficio disponibile</p>
                     </div>
                 <?php else: ?>
-                    <div class="pk-table-wrap">
-                        <table class="pk-table">
+                    <div class="uf-table-wrap">
+                        <table class="uf-table">
                             <thead>
                                 <tr>
                                     <th>Codice</th>
-                                    <th>Capacità</th>
-                                    <th>Tipo Posto</th>
+                                    <th>N° Ufficio</th>
                                     <th>Piano</th>
+                                    <th>Capacità</th>
+                                    <th>Tel. Interno</th>
                                     <th>Stato</th>
                                 </tr>
                             </thead>
                             <tbody>
-                              <?php foreach ($parkingSpots as $id => $spot): ?>
-    <?php
-        $isOcc   = strtolower($spot['status']) === 'occupato';
-        $pillCls = $isOcc ? 'pk-status--occ' : 'pk-status--avail';
-        $pillLbl = $isOcc ? 'Occupato' : 'Disponibile';
-    ?>
-    <tr class="pk-table-row" id="row-<?= $id ?>"
-        onclick="selectParkingFromTable(<?= $id ?>)">
-        <td>
-            <span class="pk-asset-pill pk-asset-pill--sm">
-                <?= htmlspecialchars($spot['name']) ?>
-            </span>
-        </td>
-        <td><?= htmlspecialchars($spot['numero_posto']) ?></td>
-        <td><?= $spot['coperto'] ? 'Sì' : 'No' ?></td>
-        <td><?= $spot['colonnina_elettrica'] ? 'Sì' : 'No' ?></td>
-        <td><?= htmlspecialchars($spot['posizione']) ?></td>
-        <td>
-            <span class="pk-status-pill <?= $pillCls ?>">
-                <?= $pillLbl ?>
-            </span>
-        </td>
-    </tr>
-<?php endforeach; ?>
+                                <?php foreach ($officeSpots as $id => $spot): ?>
+                                    <?php
+                                        $isOcc   = strtolower($spot['status']) === 'occupato';
+                                        $pillCls = $isOcc ? 'uf-status--occ' : 'uf-status--avail';
+                                        $pillLbl = $isOcc ? 'Occupato' : 'Disponibile';
+                                    ?>
+                                    <tr class="uf-table-row" id="row-<?= $id ?>"
+                                        onclick="selectOfficeFromTable(<?= $id ?>)">
+                                        <td>
+                                            <span class="uf-asset-pill uf-asset-pill--sm">
+                                                <?= htmlspecialchars($spot['name']) ?>
+                                            </span>
+                                        </td>
+                                        <td><?= htmlspecialchars($spot['numero_ufficio']) ?></td>
+                                        <td><?= htmlspecialchars($spot['piano']) ?></td>
+                                        <td><?= htmlspecialchars($spot['capacita']) ?></td>
+                                        <td><?= htmlspecialchars($spot['telefono_interno']) ?></td>
+                                        <td>
+                                            <span class="uf-status-pill <?= $pillCls ?>">
+                                                <?= $pillLbl ?>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>
                 <?php endif; ?>
             </div>
 
-        </div><!-- /.pk-right -->
-    </div><!-- /.pk-grid -->
-</div><!-- /.pk-page -->
+        </div><!-- /.uf-right -->
+    </div><!-- /.uf-grid -->
+</div><!-- /.uf-page -->
 
 <script>
 // ── Dati slot occupati (PHP → JS) ─────────────────────
 const occupiedSlots = <?= json_encode($occupiedSlotsByAsset) ?>;
 
-// ── Selezione parcheggio da dropdown ─────────────────
-function onParkingChange(select) {
+// ── Selezione ufficio da dropdown ─────────────────────
+function onOfficeChange(select) {
     const opt    = select.options[select.selectedIndex];
     const id     = select.value;
-    const detail = document.getElementById('pk-detail-card');
-    const slots  = document.getElementById('pk-slots-section');
+    const detail = document.getElementById('uf-detail-card');
+    const slots  = document.getElementById('uf-slots-section');
 
     // Highlight riga tabella
-    document.querySelectorAll('.pk-table-row').forEach(r => r.classList.remove('pk-table-row--selected'));
-    if (id) document.getElementById('row-' + id)?.classList.add('pk-table-row--selected');
+    document.querySelectorAll('.uf-table-row').forEach(r => r.classList.remove('uf-table-row--selected'));
+    if (id) document.getElementById('row-' + id)?.classList.add('uf-table-row--selected');
 
     if (!id) {
         detail.style.display = 'none';
@@ -398,26 +390,30 @@ function onParkingChange(select) {
     const isOcc = stato.toLowerCase() === 'occupato';
     detail.style.display = '';
     detail.innerHTML = `
-        <div class="pk-detail-row">
-            <span class="pk-detail-key">Codice</span>
-            <span class="pk-detail-val">${opt.dataset.code}</span>
+        <div class="uf-detail-row">
+            <span class="uf-detail-key">Codice</span>
+            <span class="uf-detail-val">${opt.dataset.code}</span>
         </div>
-        <div class="pk-detail-row">
-            <span class="pk-detail-key">Capacità</span>
-            <span class="pk-detail-val">${opt.dataset.capacita || '—'}</span>
+        <div class="uf-detail-row">
+            <span class="uf-detail-key">N° Ufficio</span>
+            <span class="uf-detail-val">${opt.dataset.numero || '—'}</span>
         </div>
-        <div class="pk-detail-row">
-            <span class="pk-detail-key">Tipo Posto</span>
-            <span class="pk-detail-val">${opt.dataset.tipo || '—'}</span>
+        <div class="uf-detail-row">
+            <span class="uf-detail-key">Piano</span>
+            <span class="uf-detail-val">${opt.dataset.piano || '—'}</span>
         </div>
-        <div class="pk-detail-row">
-            <span class="pk-detail-key">Piano</span>
-            <span class="pk-detail-val">${opt.dataset.piano || '—'}</span>
+        <div class="uf-detail-row">
+            <span class="uf-detail-key">Capacità</span>
+            <span class="uf-detail-val">${opt.dataset.capacita || '—'}</span>
         </div>
-        <div class="pk-detail-row">
-            <span class="pk-detail-key">Stato attuale</span>
-            <span class="pk-detail-val">
-                <span class="pk-status-pill ${isOcc ? 'pk-status--occ' : 'pk-status--avail'}">
+        <div class="uf-detail-row">
+            <span class="uf-detail-key">Tel. Interno</span>
+            <span class="uf-detail-val">${opt.dataset.telefono || '—'}</span>
+        </div>
+        <div class="uf-detail-row">
+            <span class="uf-detail-key">Stato attuale</span>
+            <span class="uf-detail-val">
+                <span class="uf-status-pill ${isOcc ? 'uf-status--occ' : 'uf-status--avail'}">
                     ${isOcc ? 'Occupato' : 'Disponibile'}
                 </span>
             </span>
@@ -427,11 +423,11 @@ function onParkingChange(select) {
     // Slot occupati
     const assetSlots = occupiedSlots[id] || [];
     slots.style.display = '';
-    const list = document.getElementById('pk-slots-list');
+    const list = document.getElementById('uf-slots-list');
     if (assetSlots.length > 0) {
         list.innerHTML = assetSlots.map(s => `
-            <div class="pk-slot-item">
-                <div class="pk-slot-range">
+            <div class="uf-slot-item">
+                <div class="uf-slot-range">
                     <span>${formatDate(s.inizio)}</span>
                     <span>→</span>
                     <span>${formatDate(s.fine)}</span>
@@ -439,15 +435,15 @@ function onParkingChange(select) {
             </div>
         `).join('');
     } else {
-        list.innerHTML = '<p class="pk-slots-empty">✓ Nessun periodo occupato</p>';
+        list.innerHTML = '<p class="uf-slots-empty">✓ Nessun periodo occupato</p>';
     }
 }
 
-// ── Selezione parcheggio da riga tabella ──────────────
-function selectParkingFromTable(id) {
-    const select = document.getElementById('select-parking');
+// ── Selezione ufficio da riga tabella ─────────────────
+function selectOfficeFromTable(id) {
+    const select = document.getElementById('select-office');
     select.value = id;
-    onParkingChange(select);
+    onOfficeChange(select);
     select.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
@@ -455,9 +451,9 @@ function selectParkingFromTable(id) {
 function updateDuration() {
     const start   = document.getElementById('data-inizio').value;
     const end     = document.getElementById('data-fine').value;
-    const preview = document.getElementById('pk-duration-preview');
-    const text    = document.getElementById('pk-duration-text');
-    const error   = document.getElementById('pk-form-error');
+    const preview = document.getElementById('uf-duration-preview');
+    const text    = document.getElementById('uf-duration-text');
+    const error   = document.getElementById('uf-form-error');
 
     if (!start || !end) { preview.style.display = 'none'; return; }
 
@@ -496,8 +492,8 @@ function formatDate(str) {
 
 // ── Init al caricamento ───────────────────────────────
 (function init() {
-    const sel = document.getElementById('select-parking');
-    if (sel.value) onParkingChange(sel);
+    const sel = document.getElementById('select-office');
+    if (sel.value) onOfficeChange(sel);
     updateDuration();
 })();
 </script>
