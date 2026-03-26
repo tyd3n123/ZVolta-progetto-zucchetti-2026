@@ -29,8 +29,8 @@ function updateBooking(id) {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            alert(data.message || 'Prenotazione aggiornata con successo.');
-            location.reload();
+            // Ricarica il contenuto del modale senza ricaricare l'intera pagina
+            reloadGestioneModal();
         } else {
             alert('Errore: ' + (data.error || 'Errore sconosciuto.'));
         }
@@ -49,11 +49,20 @@ function deleteBooking(id) {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            alert(data.message || 'Prenotazione eliminata con successo.');
-            location.reload();
+            // Ricarica il contenuto del modale senza ricaricare l'intera pagina
+            reloadGestioneModal();
         } else {
             alert('Errore: ' + (data.error || 'Errore sconosciuto.'));
         }
     })
     .catch(() => alert('Errore durante la comunicazione con il server.'));
+}
+
+function reloadGestioneModal() {
+    const modal     = document.getElementById('gestione-prenotazioni-modal');
+    const container = modal.querySelector('.modal-container');
+    fetch('modali/gestione-prenotazioni-modal.php')
+        .then(r => r.text())
+        .then(html => { container.innerHTML = html; })
+        .catch(() => { container.innerHTML = '<div class="error-message">Errore nel ricaricamento del contenuto.</div>'; });
 }

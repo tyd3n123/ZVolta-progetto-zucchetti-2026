@@ -348,10 +348,15 @@ body {
   border: 1px solid var(--clr-border);
   display: flex;
   flex-direction: column;
+  max-height: 24rem;
 }
 
 .bookings-column.small {
   flex: unset;
+
+  scrollbar-width: thin;
+  scrollbar-color: #888;
+
 }
 
 .bookings-column h2 {
@@ -388,7 +393,7 @@ body {
 .booking-item {
   background: var(--clr-surface);
   border: 1px solid var(--clr-border);
-  border-radius: var(--radius-md);
+  border-radius: 5px;
   padding: 12px 14px;
   margin-bottom: 8px;
   border-left: 3px solid var(--clr-primary);

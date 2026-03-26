@@ -185,196 +185,277 @@ if ($result) {
         </div>
     <?php endif; ?>
 
-    <!-- Main grid -->
-    <div class="pk-grid">
+    <!-- ══ MAPPA + PANNELLO ════════════════════════════ -->
+    <div class="pk-map-layout" id="map-layout">
 
-        <!-- ── LEFT: form prenotazione ─────────────────── -->
-        <div class="pk-panel">
-            <p class="pk-panel-title">Nuova Prenotazione</p>
+        <!-- ── Zona mappa (sempre visibile) ────────────── -->
+        <div class="pk-map-zone" id="map-zone">
 
-            <form method="POST" id="booking-form">
-                <input type="hidden" name="action" value="book">
-
-            <!-- Selezione parcheggio -->
-            <div class="pk-field">
-            <label for="select-parking">Parcheggio</label>
-            <select id="select-parking" name="id_asset" required onchange="onParkingChange(this)">
-                <option value="">— Seleziona un parcheggio —</option>
-                <?php foreach ($parkingSpots as $id => $spot): ?>
-                    <option value="<?= $id ?>"
-                            data-code="<?= htmlspecialchars($spot['name']) ?>"
-                            data-stato="<?= htmlspecialchars($spot['status']) ?>"
-                            data-numero-posto="<?= htmlspecialchars($spot['numero_posto']) ?>"
-                            data-coperto="<?= $spot['coperto'] ? 'Sì' : 'No' ?>"
-                            data-colonnina="<?= $spot['colonnina_elettrica'] ? 'Sì' : 'No' ?>"
-                            data-posizione="<?= htmlspecialchars($spot['posizione']) ?>"
-                            <?= (!empty($_POST['id_asset']) && $_POST['id_asset'] == $id) ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($spot['name']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
+            <div class="pk-map-header">
+                <p class="pk-map-title">Mappa Parcheggi — Sede</p>
+                <div class="pk-map-legend">
+                    <div class="pk-legend-item">
+                        <span class="pk-legend-dot pk-legend-dot--avail"></span>
+                        Disponibile
+                    </div>
+                    <div class="pk-legend-item">
+                        <span class="pk-legend-dot pk-legend-dot--occ"></span>
+                        Occupato
+                    </div>
+                </div>
             </div>
 
-                <!-- Tipo veicolo -->
-                <div class="pk-field">
-                    <label for="tipo-veicolo">Tipo Veicolo</label>
-                    <select id="tipo-veicolo" name="tipo_veicolo" required>
-                        <option value="">— Seleziona tipo —</option>
-                        <option value="Auto" <?= (($_POST['tipo_veicolo'] ?? '') === 'Auto') ? 'selected' : '' ?>>🚗 Auto</option>
-                        <option value="Moto" <?= (($_POST['tipo_veicolo'] ?? '') === 'Moto') ? 'selected' : '' ?>>🏍️ Moto</option>
-                    </select>
+            <!-- Stats bar -->
+            <div class="pk-map-stats">
+                <span class="pk-stat-chip pk-stat-chip--total">🚗 <?= count($parkingSpots) ?> parcheggi totali</span>
+                <?php $availCount = 0; foreach ($parkingSpots as $spot) if (strtolower($spot['status']) !== 'occupato') $availCount++; ?>
+                <span class="pk-stat-chip pk-stat-chip--avail">✓ <?= $availCount ?> disponibili</span>
+                <?php $occCount = 0; foreach ($parkingSpots as $spot) if (strtolower($spot['status']) === 'occupato') $occCount++; ?>
+                <?php if ($occCount > 0): ?>
+                    <span class="pk-stat-chip pk-stat-chip--occ">✗ <?= $occCount ?> occupati</span>
+                <?php endif; ?>
+            </div>
+
+            <!-- Griglia parcheggi -->
+            <?php if (empty($parkingSpots)): ?>
+                <div class="pk-empty">
+                    <span>�</span>
+                    <p>Nessun parcheggio disponibile</p>
+                </div>
+            <?php else: ?>
+                <div class="pk-parking-grid">
+                    <?php foreach ($parkingSpots as $id => $spot): ?>
+                        <?php
+                            $isOcc     = strtolower($spot['status']) === 'occupato';
+                            $cardCls   = $isOcc ? 'pk-parking-card--occ'   : 'pk-parking-card--avail';
+                            $statusCls = $isOcc ? 'pk-card-status--occ'   : 'pk-card-status--avail';
+                            $statusLbl = $isOcc ? 'Occupato' : 'Disponibile';
+                        ?>
+                        <div class="pk-parking-card <?= $cardCls ?>"
+                             id="card-<?= $id ?>"
+                             data-id="<?= $id ?>"
+                             data-code="<?= htmlspecialchars($spot['name']) ?>"
+                             data-stato="<?= htmlspecialchars($spot['status']) ?>"
+                             data-numero-posto="<?= htmlspecialchars($spot['numero_posto']) ?>"
+                             data-coperto="<?= $spot['coperto'] ? 'Sì' : 'No' ?>"
+                             data-colonnina="<?= $spot['colonnina_elettrica'] ? 'Sì' : 'No' ?>"
+                             data-posizione="<?= htmlspecialchars($spot['posizione']) ?>"
+                             onclick="openParkingPanel(<?= $id ?>)">
+                            <span class="pk-card-icon"><?= $isOcc ? '🔴' : '🟢' ?></span>
+                            <div class="pk-card-name"><?= htmlspecialchars($spot['name']) ?></div>
+                            <div class="pk-card-meta">
+                                <?php if ($spot['numero_posto'] !== '-'): ?>
+                                    <div class="pk-card-meta-row">🅿️ Posto <?= htmlspecialchars($spot['numero_posto']) ?></div>
+                                <?php endif; ?>
+                                <?php if ($spot['coperto'] && $spot['coperto'] !== '-'): ?>
+                                    <div class="pk-card-meta-row">🏠 Coperto: <?= htmlspecialchars($spot['coperto']) ?></div>
+                                <?php endif; ?>
+                                <?php if ($spot['colonnina_elettrica'] && $spot['colonnina_elettrica'] !== '-'): ?>
+                                    <div class="pk-card-meta-row">⚡ Colonnina: <?= htmlspecialchars($spot['colonnina_elettrica']) ?></div>
+                                <?php endif; ?>
+                            </div>
+                            <span class="pk-card-status <?= $statusCls ?>"><?= $statusLbl ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+        </div><!-- /.pk-map-zone -->
+
+        <!-- ── Pannello laterale slide-in (2/3 della larghezza) ─────────── -->
+        <div class="pk-side-panel" id="side-panel">
+
+            <div class="pk-panel-top">
+                <div>
+                    <h3 class="pk-panel-parking-name" id="panel-title">—</h3>
+                    <div id="panel-status-pill"></div>
+                </div>
+                <button class="pk-panel-close" onclick="closeParkingPanel()" title="Chiudi">✕</button>
+            </div>
+
+            <div class="pk-panel-body">
+
+                <!-- Info tiles -->
+                <div class="pk-info-section">
+                    <div class="pk-info-grid" id="panel-info-grid"></div>
+
+                    <p class="pk-panel-section-title">📅 Periodi già occupati</p>
+                    <div class="pk-panel-slots" id="panel-slots"></div>
                 </div>
 
-                <!-- Detail card (visibile dopo selezione) -->
-                <div id="pk-detail-card" class="pk-detail-card" style="display:none;"></div>
+                <!-- Form prenotazione -->
+                <div class="pk-panel-form-wrap full-width">
+                    <p class="pk-panel-section-title">✏️ Nuova Prenotazione</p>
 
-                <!-- Slot occupati -->
-                <div id="pk-slots-section" class="pk-slots-section" style="display:none;">
-                    <p class="pk-slots-title">📅 Periodi già occupati</p>
-                    <div class="pk-slots-list" id="pk-slots-list"></div>
+                    <form method="POST" id="booking-form">
+                        <input type="hidden" name="action"   value="book">
+                        <input type="hidden" name="id_asset" id="panel-asset-id" value="">
+
+                        <!-- Tipo veicolo -->
+                        <div class="pk-field">
+                            <label for="tipo-veicolo">Tipo Veicolo</label>
+                            <select id="tipo-veicolo" name="tipo_veicolo" required>
+                                <option value="">— Seleziona tipo —</option>
+                                <option value="Auto">🚗 Auto</option>
+                                <option value="Moto">�️ Moto</option>
+                            </select>
+                        </div>
+
+                        <div class="pk-fields-row">
+                            <div class="pk-field">
+                                <label for="data-inizio">Data Inizio</label>
+                                <input type="datetime-local" id="data-inizio" name="data_inizio"
+                                       value="<?= htmlspecialchars($_POST['data_inizio'] ?? '') ?>"
+                                       required onchange="updateDuration()">
+                            </div>
+                            <div class="pk-field">
+                                <label for="data-fine">Data Fine</label>
+                                <input type="datetime-local" id="data-fine" name="data_fine"
+                                       value="<?= htmlspecialchars($_POST['data_fine'] ?? '') ?>"
+                                       required onchange="updateDuration()">
+                            </div>
+                        </div>
+
+                        <div id="pk-duration-preview" class="pk-duration-preview" style="display:none;">
+                            <span class="pk-duration-icon">⏱️</span>
+                            <span id="pk-duration-text"></span>
+                        </div>
+
+                        <div id="pk-form-error" class="pk-form-error" style="display:none;"></div>
+
+                        <button type="submit" class="pk-submit-btn" id="submit-btn">
+                            Conferma Prenotazione
+                        </button>
+                    </form>
                 </div>
 
-                <!-- Date -->
-                <div class="pk-fields-row">
-                    <div class="pk-field">
-                        <label for="data-inizio">Data Inizio</label>
-                        <input type="datetime-local" id="data-inizio" name="data_inizio"
-                               value="<?= htmlspecialchars($_POST['data_inizio'] ?? '') ?>"
-                               required onchange="updateDuration()">
-                    </div>
-                    <div class="pk-field">
-                        <label for="data-fine">Data Fine</label>
-                        <input type="datetime-local" id="data-fine" name="data_fine"
-                               value="<?= htmlspecialchars($_POST['data_fine'] ?? '') ?>"
-                               required onchange="updateDuration()">
-                    </div>
-                </div>
+            </div><!-- /.pk-panel-body -->
+        </div><!-- /.pk-side-panel -->
 
-                <!-- Duration preview -->
-                <div id="pk-duration-preview" class="pk-duration-preview" style="display:none;">
-                    <span class="pk-duration-icon">⏱️</span>
-                    <span id="pk-duration-text"></span>
-                </div>
+    </div><!-- /.pk-map-layout -->
 
-                <!-- Form error -->
-                <div id="pk-form-error" class="pk-form-error" style="display:none;"></div>
-
-                <button type="submit" class="pk-submit-btn" id="submit-btn">
-                    Conferma Prenotazione
-                </button>
-            </form>
+    <!-- ── Le tue prenotazioni attive ─────────────────── -->
+    <div class="pk-bookings-strip">
+        <div class="pk-strip-header">
+            <p class="pk-strip-title">Le tue prenotazioni attive</p>
+            <span class="pk-count-badge"><?= count($userBookings) ?></span>
         </div>
 
-        <!-- ── RIGHT ───────────────────────────────────── -->
-        <div class="pk-right">
-
-            <!-- Le tue prenotazioni attive -->
-            <div class="pk-panel">
-                <div class="pk-panel-header">
-                    <p class="pk-panel-title">Le tue prenotazioni attive</p>
-                    <span class="pk-count-badge"><?= count($userBookings) ?></span>
-                </div>
-
-                <?php if (empty($userBookings)): ?>
-                    <div class="pk-empty">
-                        <span>🅿️</span>
-                        <p>Nessuna prenotazione parcheggio attiva</p>
-                    </div>
-                <?php else: ?>
-                    <div class="pk-bookings-list">
-                        <?php foreach ($userBookings as $b): ?>
-                            <?php
-                                $start    = new DateTime($b['data_inizio']);
-                                $end      = new DateTime($b['data_fine']);
-                                $now      = new DateTime();
-                                $isActive = $start <= $now && $end >= $now;
-                                $statusClass = $isActive ? 'pk-status--now' : 'pk-status--future';
-                                $statusLabel = $isActive ? 'In corso' : 'Programmato';
-
-                                $diff   = $start->diff($end);
-                                $days   = $diff->days;
-                                $hours  = $diff->h;
-                                $durStr = $days > 0 ? "{$days}g {$hours}h" : "{$hours}h {$diff->i}m";
-                            ?>
-                            <div class="pk-booking-item">
-                                <div class="pk-booking-top">
-                                    <span class="pk-asset-pill"><?= htmlspecialchars($b['codice_asset']) ?></span>
-                                    <span class="pk-status-pill <?= $statusClass ?>"><?= $statusLabel ?></span>
-                                    <span class="pk-dur"><?= $durStr ?></span>
-                                </div>
-                                <div class="pk-booking-dates">
-                                    <?= date('d/m/Y H:i', strtotime($b['data_inizio'])) ?>
-                                    <span class="pk-arrow">→</span>
-                                    <?= date('d/m/Y H:i', strtotime($b['data_fine'])) ?>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
+        <?php if (empty($userBookings)): ?>
+            <div class="pk-empty">
+                <span>🚗</span>
+                <p>Nessuna prenotazione parcheggio attiva</p>
             </div>
-
-            <!-- Elenco parcheggi -->
-            <div class="pk-panel">
-                <div class="pk-panel-header">
-                    <p class="pk-panel-title">Elenco Parcheggi</p>
-                    <span class="pk-count-badge"><?= count($parkingSpots) ?></span>
-                </div>
-
-                <?php if (empty($parkingSpots)): ?>
-                    <div class="pk-empty">
-                        <span>🅿️</span>
-                        <p>Nessun parcheggio disponibile</p>
+        <?php else: ?>
+            <div class="pk-bookings-list">
+                <?php foreach ($userBookings as $b): ?>
+                    <?php
+                        $start    = new DateTime($b['data_inizio']);
+                        $end      = new DateTime($b['data_fine']);
+                        $now      = new DateTime();
+                        $isActive = $start <= $now && $end >= $now;
+                        $statusClass = $isActive ? 'pk-status--now'    : 'pk-status--future';
+                        $statusLabel = $isActive ? 'In corso' : 'Programmato';
+                        $diff   = $start->diff($end);
+                        $days   = $diff->days;
+                        $hours  = $diff->h;
+                        $durStr = $days > 0 ? "{$days}g {$hours}h" : "{$hours}h {$diff->i}m";
+                    ?>
+                    <div class="pk-booking-item">
+                        <div class="pk-booking-top">
+                            <span class="pk-asset-pill"><?= htmlspecialchars($b['codice_asset']) ?></span>
+                            <span class="pk-status-pill <?= $statusClass ?>"><?= $statusLabel ?></span>
+                            <span class="pk-dur"><?= $durStr ?></span>
+                        </div>
+                        <div class="pk-booking-dates">
+                            <?= date('d/m/Y H:i', strtotime($b['data_inizio'])) ?>
+                            <span class="pk-arrow">→</span>
+                            <?= date('d/m/Y H:i', strtotime($b['data_fine'])) ?>
+                        </div>
                     </div>
-                <?php else: ?>
-                    <div class="pk-table-wrap">
-                        <table class="pk-table">
-                            <thead>
-                                <tr>
-                                    <th>Codice</th>
-                                    <th>Capacità</th>
-                                    <th>Tipo Posto</th>
-                                    <th>Piano</th>
-                                    <th>Stato</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                              <?php foreach ($parkingSpots as $id => $spot): ?>
-    <?php
-        $isOcc   = strtolower($spot['status']) === 'occupato';
-        $pillCls = $isOcc ? 'pk-status--occ' : 'pk-status--avail';
-        $pillLbl = $isOcc ? 'Occupato' : 'Disponibile';
-    ?>
-    <tr class="pk-table-row" id="row-<?= $id ?>"
-        onclick="selectParkingFromTable(<?= $id ?>)">
-        <td>
-            <span class="pk-asset-pill pk-asset-pill--sm">
-                <?= htmlspecialchars($spot['name']) ?>
-            </span>
-        </td>
-        <td><?= htmlspecialchars($spot['numero_posto']) ?></td>
-        <td><?= $spot['coperto'] ? 'Sì' : 'No' ?></td>
-        <td><?= $spot['colonnina_elettrica'] ? 'Sì' : 'No' ?></td>
-        <td><?= htmlspecialchars($spot['posizione']) ?></td>
-        <td>
-            <span class="pk-status-pill <?= $pillCls ?>">
-                <?= $pillLbl ?>
-            </span>
-        </td>
-    </tr>
-<?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php endif; ?>
+                <?php endforeach; ?>
             </div>
+        <?php endif; ?>
+    </div>
 
-        </div><!-- /.pk-right -->
-    </div><!-- /.pk-grid -->
 </div><!-- /.pk-page -->
 
 <script>
 // ── Dati slot occupati (PHP → JS) ─────────────────────
 const occupiedSlots = <?= json_encode($occupiedSlotsByAsset) ?>;
+
+// ── Apri pannello parcheggio ──────────────────────────
+function openParkingPanel(id) {
+    const card = document.getElementById('card-' + id);
+    if (!card) return;
+
+    // Selezione visiva card
+    document.querySelectorAll('.pk-parking-card').forEach(c => c.classList.remove('pk-parking-card--selected'));
+    card.classList.add('pk-parking-card--selected');
+
+    const code     = card.dataset.code;
+    const stato    = card.dataset.stato;
+    const numero   = card.dataset.numeroPosto;
+    const coperto  = card.dataset.coperto;
+    const colonnina = card.dataset.colonnina;
+    const posizione = card.dataset.posizione;
+    const isOcc    = stato.toLowerCase() === 'occupato';
+
+    // Header pannello
+    document.getElementById('panel-title').textContent = code;
+    document.getElementById('panel-status-pill').innerHTML =
+        `<span class="pk-status-pill ${isOcc ? 'pk-status--occ' : 'pk-status--avail'}">
+            ${isOcc ? 'Occupato' : 'Disponibile'}
+         </span>`;
+
+    // Info tiles
+    document.getElementById('panel-info-grid').innerHTML = `
+        <div class="pk-info-tile">
+            <span class="pk-info-tile-label">Posto</span>
+            <span class="pk-info-tile-val">${numero}</span>
+        </div>
+        <div class="pk-info-tile">
+            <span class="pk-info-tile-label">Coperto</span>
+            <span class="pk-info-tile-val">${coperto}</span>
+        </div>
+        <div class="pk-info-tile">
+            <span class="pk-info-tile-label">Colonnina</span>
+            <span class="pk-info-tile-val">${colonnina}</span>
+        </div>
+        <div class="pk-info-tile">
+            <span class="pk-info-tile-label">Posizione</span>
+            <span class="pk-info-tile-val">${posizione}</span>
+        </div>`;
+
+    // Slot occupati
+    const slots   = occupiedSlots[id] || [];
+    const slotsEl = document.getElementById('panel-slots');
+    if (slots.length > 0) {
+        slotsEl.innerHTML = slots.map(s => `
+            <div class="pk-slot-item">
+                <span class="pk-slot-dot"></span>
+                <span>${formatDate(s.inizio)}</span>
+                <span class="pk-slot-arrow">→</span>
+                <span>${formatDate(s.fine)}</span>
+            </div>`).join('');
+    } else {
+        slotsEl.innerHTML = '<div class="pk-slots-empty-msg">✓ Nessun periodo occupato — parcheggio libero</div>';
+    }
+
+    // Collega id_asset al form
+    document.getElementById('panel-asset-id').value = id;
+
+    // Apri pannello con animazione
+    document.getElementById('side-panel').classList.add('open');
+}
+
+// ── Chiudi pannello ───────────────────────────────────
+function closeParkingPanel() {
+    document.getElementById('side-panel').classList.remove('open');
+    document.querySelectorAll('.pk-parking-card').forEach(c => c.classList.remove('pk-parking-card--selected'));
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeParkingPanel(); });
 
 // ── Selezione parcheggio da dropdown ─────────────────
 function onParkingChange(select) {

@@ -38,7 +38,7 @@ if (!$id_prenotazione) {
 try {
     $conn->begin_transaction();
 
-    // Recupera id_asset
+    // Recupera id_asset della prenotazione
     $stmt = $conn->prepare("SELECT id_asset FROM prenotazioni WHERE id_prenotazione = ?");
     $stmt->bind_param("i", $id_prenotazione);
     $stmt->execute();
@@ -49,7 +49,7 @@ try {
         throw new Exception('Prenotazione non trovata.');
     }
 
-    // Elimina prenotazione
+    // Elimina la prenotazione dalla tabella prenotazioni
     $stmt = $conn->prepare("DELETE FROM prenotazioni WHERE id_prenotazione = ?");
     $stmt->bind_param("i", $id_prenotazione);
     if (!$stmt->execute()) throw new Exception('Errore durante l\'eliminazione della prenotazione.');

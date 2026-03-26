@@ -11,11 +11,20 @@ function cancelBooking(id) {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            alert(data.message || 'Prenotazione annullata con successo.');
-            location.reload();
+            // Ricarica il contenuto del modale senza ricaricare l'intera pagina
+            reloadUserBookingsModal();
         } else {
             alert('Errore: ' + (data.error || 'Errore sconosciuto.'));
         }
     })
     .catch(() => alert('Errore durante la comunicazione con il server.'));
+}
+
+function reloadUserBookingsModal() {
+    const modal     = document.getElementById('user-bookings-modal');
+    const container = modal.querySelector('.modal-container');
+    fetch('modali/user-bookings-modal.php')
+        .then(r => r.text())
+        .then(html => { container.innerHTML = html; })
+        .catch(() => { container.innerHTML = '<div class="error-message">Errore nel ricaricamento del contenuto.</div>'; });
 }

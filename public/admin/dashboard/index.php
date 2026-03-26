@@ -87,7 +87,7 @@ $result = $conn->query(
     "SELECT u.id_utente, u.nome, u.cognome, r.nome_ruolo AS ruolo
      FROM utenti u
      JOIN ruoli r ON u.id_ruolo = r.id_ruolo
-     WHERE r.nome_ruolo = 'Dipendente'
+     WHERE r.nome_ruolo IN ('Dipendente', 'Coordinatore')
      ORDER BY u.cognome, u.nome"
 );
 if ($result) while ($row = $result->fetch_assoc()) $employees[] = $row;
@@ -142,31 +142,7 @@ if ($result) while ($row = $result->fetch_assoc()) $employees[] = $row;
 <!-- ── Main Layout ────────────────────────────────────── -->
 <div class="dashboard-container">
 
-    <!-- Colonna sinistra: prenota -->
-    <div class="column">
-        <h2>Prenota</h2>
-        <div class="booking-card" onclick="location.href='../sale-riunioni/index.php'">
-            <div class="card-content">
-                <h3>🪑 Sale riunioni</h3>
-                <p>Prenota sale attrezzate per meeting e presentazioni</p>
-                <button class="book-btn">Prenota →</button>
-            </div>
-        </div>
-        <div class="booking-card" onclick="location.href='../uffici/index.php'">
-            <div class="card-content">
-                <h3>🖥️ Uffici</h3>
-                <p>Prenota uffici e postazioni lavoro</p>
-                <button class="book-btn" >Prenota</button>
-            </div>
-        </div>
-        <div class="booking-card" onclick="location.href='../parcheggi/index.php'">
-            <div class="card-content">
-                <h3>🚗 Parcheggi</h3>
-                <p>Prenota posti auto e moto</p>
-                <button class="book-btn">Prenota →</button>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Colonna destra: prenotazioni + utenti -->
     <div class="bookings-section">
@@ -235,7 +211,33 @@ if ($result) while ($row = $result->fetch_assoc()) $employees[] = $row;
                         <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
-                <button class="show-more-btn">Aggiungi utente +</button>
+            </div>
+
+            
+            <!-- Colonna sinistra: prenota -->
+            <div class="column">
+                <h2>Prenota</h2>
+                <div class="booking-card" onclick="location.href='../sale-riunioni/index.php'">
+                    <div class="card-content">
+                        <h3>🪑 Sale riunioni</h3>
+                        <p>Prenota sale attrezzate per meeting e presentazioni</p>
+                        <button class="book-btn">Prenota →</button>
+                    </div>
+                </div>
+                <div class="booking-card" onclick="location.href='../uffici/index.php'">
+                    <div class="card-content">
+                        <h3>🖥️ Uffici</h3>
+                        <p>Prenota uffici e postazioni lavoro</p>
+                        <button class="book-btn" >Prenota</button>
+                    </div>
+                </div>
+                <div class="booking-card" onclick="location.href='../parcheggi/index.php'">
+                    <div class="card-content">
+                        <h3>🚗 Parcheggi</h3>
+                        <p>Prenota posti auto e moto</p>
+                        <button class="book-btn">Prenota →</button>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -267,6 +269,15 @@ function closeUserBookingsModal() {
     document.getElementById('user-bookings-modal').style.display = 'none';
 }
 
+function reloadUserBookingsModal() {
+    const modal     = document.getElementById('user-bookings-modal');
+    const container = modal.querySelector('.modal-container');
+    fetch('modali/user-bookings-modal.php')
+        .then(r => r.text())
+        .then(html => { container.innerHTML = html; })
+        .catch(() => { container.innerHTML = '<div class="error-message">Errore nel ricaricamento del contenuto.</div>'; });
+}
+
 // ── Modale: gestione prenotazioni (admin) ─────────────
 function openGestionePrenotazioni() {
     const modal     = document.getElementById('gestione-prenotazioni-modal');
@@ -278,6 +289,15 @@ function openGestionePrenotazioni() {
         .catch(() => { container.innerHTML = '<div class="error-message">Errore nel caricamento del contenuto.</div>'; });
 }
 
+function reloadGestioneModal() {
+    const modal     = document.getElementById('gestione-prenotazioni-modal');
+    const container = modal.querySelector('.modal-container');
+    fetch('modali/gestione-prenotazioni-modal.php')
+        .then(r => r.text())
+        .then(html => { container.innerHTML = html; })
+        .catch(() => { container.innerHTML = '<div class="error-message">Errore nel ricaricamento del contenuto.</div>'; });
+}
+
 // ── Chiudi tutti i modali ─────────────────────────────
 function closeModal() {
     document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
@@ -285,6 +305,64 @@ function closeModal() {
 
 document.addEventListener('click',   e => { if (e.target.classList.contains('modal-overlay')) closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ── Funzioni modale utente ────────────────────────────
+function cancelBooking(id) {
+    if (!confirm('Sei sicuro di voler annullare questa prenotazione?')) return;
+    fetch('modali/user-bookings-modal.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=cancel&id_prenotazione=${id}`
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) reloadUserBookingsModal();
+        else alert('Errore: ' + (data.error || 'Errore sconosciuto.'));
+    })
+    .catch(() => alert('Errore durante la comunicazione con il server.'));
+}
+
+// ── Funzioni modale admin ─────────────────────────────
+function showEditForm(id) {
+    document.getElementById('edit-form-' + id).style.display = 'table-row';
+}
+
+function hideEditForm(id) {
+    document.getElementById('edit-form-' + id).style.display = 'none';
+}
+
+function updateBooking(id) {
+    const dataInizio = document.getElementById('start-' + id).value;
+    const dataFine   = document.getElementById('end-'   + id).value;
+    if (!dataInizio || !dataFine) { alert('Per favore compila tutti i campi.'); return; }
+    if (new Date(dataFine) <= new Date(dataInizio)) { alert('La data di fine deve essere successiva alla data di inizio.'); return; }
+    fetch('modali/gestione-prenotazioni-modal.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=update&id_prenotazione=${id}&data_inizio=${encodeURIComponent(dataInizio)}&data_fine=${encodeURIComponent(dataFine)}`
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) reloadGestioneModal();
+        else alert('Errore: ' + (data.error || 'Errore sconosciuto.'));
+    })
+    .catch(() => alert('Errore durante la comunicazione con il server.'));
+}
+
+function deleteBooking(id) {
+    if (!confirm('Sei sicuro di voler eliminare questa prenotazione?')) return;
+    fetch('modali/elimina-prenotazioni.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `action=delete&id_prenotazione=${id}`
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) reloadGestioneModal();
+        else alert('Errore: ' + (data.error || 'Errore sconosciuto.'));
+    })
+    .catch(() => alert('Errore durante la comunicazione con il server.'));
+}
 </script>
 
 </body>

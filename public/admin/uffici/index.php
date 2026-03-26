@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'book'
 }
 
 // ── Fetch uffici ──────────────────────────────────────
-$officeSpots = []; // id_asset => [name, status, ...]
+$officeSpots = [];
 $sql = "SELECT a.id_asset, a.codice_asset, a.stato,
                COALESCE(u.numero_ufficio, '-')   AS numero_ufficio,
                COALESCE(u.piano, '-')            AS piano,
@@ -101,7 +101,7 @@ if ($result) {
     }
 }
 
-// ── Fetch prenotazioni attive dell'utente (uffici) ────
+// ── Fetch prenotazioni attive dell'utente ─────────────
 $userBookings = [];
 $stmt = $conn->prepare(
     "SELECT p.id_prenotazione, p.data_inizio, p.data_fine,
@@ -139,6 +139,14 @@ if ($result) {
         ];
     }
 }
+
+// ── Stats ─────────────────────────────────────────────
+$totalOffices = count($officeSpots);
+$availCount   = count(array_filter($officeSpots, fn($s) => strtolower($s['status']) !== 'occupato'));
+$occCount     = $totalOffices - $availCount;
+
+// ── Quale ufficio riaprire dopo il POST ───────────────
+$reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -174,7 +182,7 @@ if ($result) {
     <div class="uf-title-row">
         <div>
             <h2 class="uf-page-title">🏢 Uffici</h2>
-            <p class="uf-page-sub">Prenota un ufficio per il periodo desiderato</p>
+            <p class="uf-page-sub">Seleziona un ufficio dalla mappa per prenotarlo</p>
         </div>
     </div>
 
@@ -186,268 +194,265 @@ if ($result) {
         </div>
     <?php endif; ?>
 
-    <!-- Main grid -->
-    <div class="uf-grid">
+    <!-- ══ MAPPA + PANNELLO ════════════════════════════ -->
+    <div class="uf-map-layout" id="map-layout">
 
-        <!-- ── LEFT: form prenotazione ─────────────────── -->
-        <div class="uf-panel">
-            <p class="uf-panel-title">Nuova Prenotazione</p>
+        <!-- ── Zona mappa (sempre visibile) ────────────── -->
+        <div class="uf-map-zone" id="map-zone">
 
-            <form method="POST" id="booking-form">
-                <input type="hidden" name="action" value="book">
-
-                <!-- Selezione ufficio -->
-                <div class="uf-field">
-                    <label for="select-office">Ufficio</label>
-                    <select id="select-office" name="id_asset" required onchange="onOfficeChange(this)">
-                        <option value="">— Seleziona un ufficio —</option>
-                        <?php foreach ($officeSpots as $id => $spot): ?>
-                            <option value="<?= $id ?>"
-                                    data-code="<?= htmlspecialchars($spot['name']) ?>"
-                                    data-stato="<?= htmlspecialchars($spot['status']) ?>"
-                                    data-numero="<?= htmlspecialchars($spot['numero_ufficio']) ?>"
-                                    data-piano="<?= htmlspecialchars($spot['piano']) ?>"
-                                    data-capacita="<?= htmlspecialchars($spot['capacita']) ?>"
-                                    data-telefono="<?= htmlspecialchars($spot['telefono_interno']) ?>"
-                                    <?= (!empty($_POST['id_asset']) && $_POST['id_asset'] == $id) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($spot['name']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <!-- Detail card (visibile dopo selezione) -->
-                <div id="uf-detail-card" class="uf-detail-card" style="display:none;"></div>
-
-                <!-- Slot occupati -->
-                <div id="uf-slots-section" class="uf-slots-section" style="display:none;">
-                    <p class="uf-slots-title">📅 Periodi già occupati</p>
-                    <div class="uf-slots-list" id="uf-slots-list"></div>
-                </div>
-
-                <!-- Date -->
-                <div class="uf-fields-row">
-                    <div class="uf-field">
-                        <label for="data-inizio">Data Inizio</label>
-                        <input type="datetime-local" id="data-inizio" name="data_inizio"
-                               value="<?= htmlspecialchars($_POST['data_inizio'] ?? '') ?>"
-                               required onchange="updateDuration()">
+            <div class="uf-map-header">
+                <p class="uf-map-title">Mappa Uffici — Sede</p>
+                <div class="uf-map-legend">
+                    <div class="uf-legend-item">
+                        <span class="uf-legend-dot uf-legend-dot--avail"></span>
+                        Disponibile
                     </div>
-                    <div class="uf-field">
-                        <label for="data-fine">Data Fine</label>
-                        <input type="datetime-local" id="data-fine" name="data_fine"
-                               value="<?= htmlspecialchars($_POST['data_fine'] ?? '') ?>"
-                               required onchange="updateDuration()">
+                    <div class="uf-legend-item">
+                        <span class="uf-legend-dot uf-legend-dot--occ"></span>
+                        Occupato
                     </div>
                 </div>
+            </div>
 
-                <!-- Duration preview -->
-                <div id="uf-duration-preview" class="uf-duration-preview" style="display:none;">
-                    <span class="uf-duration-icon">⏱️</span>
-                    <span id="uf-duration-text"></span>
+            <!-- Stats bar -->
+            <div class="uf-map-stats">
+                <span class="uf-stat-chip uf-stat-chip--total">🏢 <?= $totalOffices ?> uffici totali</span>
+                <span class="uf-stat-chip uf-stat-chip--avail">✓ <?= $availCount ?> disponibili</span>
+                <?php if ($occCount > 0): ?>
+                    <span class="uf-stat-chip uf-stat-chip--occ">✗ <?= $occCount ?> occupati</span>
+                <?php endif; ?>
+            </div>
+
+            <!-- Griglia uffici -->
+            <?php if (empty($officeSpots)): ?>
+                <div class="uf-empty">
+                    <span>🏢</span>
+                    <p>Nessun ufficio disponibile</p>
+                </div>
+            <?php else: ?>
+                <div class="uf-office-grid">
+                    <?php foreach ($officeSpots as $id => $spot): ?>
+                        <?php
+                            $isOcc     = strtolower($spot['status']) === 'occupato';
+                            $cardCls   = $isOcc ? 'uf-office-card--occ'   : 'uf-office-card--avail';
+                            $statusCls = $isOcc ? 'uf-card-status--occ'   : 'uf-card-status--avail';
+                            $statusLbl = $isOcc ? 'Occupato' : 'Disponibile';
+                        ?>
+                        <div class="uf-office-card <?= $cardCls ?>"
+                             id="card-<?= $id ?>"
+                             data-id="<?= $id ?>"
+                             data-code="<?= htmlspecialchars($spot['name']) ?>"
+                             data-stato="<?= htmlspecialchars($spot['status']) ?>"
+                             data-numero="<?= htmlspecialchars($spot['numero_ufficio']) ?>"
+                             data-piano="<?= htmlspecialchars($spot['piano']) ?>"
+                             data-capacita="<?= htmlspecialchars($spot['capacita']) ?>"
+                             data-telefono="<?= htmlspecialchars($spot['telefono_interno']) ?>"
+                             onclick="openOfficePanel(<?= $id ?>)">
+                            <span class="uf-card-icon"><?= $isOcc ? '🔴' : '🟢' ?></span>
+                            <div class="uf-card-name"><?= htmlspecialchars($spot['name']) ?></div>
+                            <div class="uf-card-meta">
+                                <?php if ($spot['piano'] !== '-'): ?>
+                                    <div class="uf-card-meta-row">🏗️ Piano <?= htmlspecialchars($spot['piano']) ?></div>
+                                <?php endif; ?>
+                                <?php if ($spot['capacita'] !== '-'): ?>
+                                    <div class="uf-card-meta-row">👥 <?= htmlspecialchars($spot['capacita']) ?> persone</div>
+                                <?php endif; ?>
+                            </div>
+                            <span class="uf-card-status <?= $statusCls ?>"><?= $statusLbl ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+        </div><!-- /.uf-map-zone -->
+
+        <!-- ── Pannello laterale slide-in (2/3) ─────────── -->
+        <div class="uf-side-panel" id="side-panel">
+
+            <div class="uf-panel-top">
+                <div>
+                    <h3 class="uf-panel-office-name" id="panel-title">—</h3>
+                    <div id="panel-status-pill"></div>
+                </div>
+                <button class="uf-panel-close" onclick="closeOfficePanel()" title="Chiudi">✕</button>
+            </div>
+
+            <div class="uf-panel-body">
+
+                <!-- Info tiles -->
+                <div class="uf-info-section">
+                    <div class="uf-info-grid" id="panel-info-grid"></div>
+
+                    <p class="uf-panel-section-title">📅 Periodi già occupati</p>
+                    <div class="uf-panel-slots" id="panel-slots"></div>
                 </div>
 
-                <!-- Form error -->
-                <div id="uf-form-error" class="uf-form-error" style="display:none;"></div>
+                <!-- Form prenotazione -->
+                <div class="uf-panel-form-wrap full-width">
+                    <p class="uf-panel-section-title">✏️ Nuova Prenotazione</p>
 
-                <button type="submit" class="uf-submit-btn" id="submit-btn">
-                    Conferma Prenotazione
-                </button>
-            </form>
+                    <form method="POST" id="booking-form">
+                        <input type="hidden" name="action"   value="book">
+                        <input type="hidden" name="id_asset" id="panel-asset-id" value="">
+
+                        <div class="uf-fields-row">
+                            <div class="uf-field">
+                                <label for="data-inizio">Data Inizio</label>
+                                <input type="datetime-local" id="data-inizio" name="data_inizio"
+                                       value="<?= htmlspecialchars($_POST['data_inizio'] ?? '') ?>"
+                                       required onchange="updateDuration()">
+                            </div>
+                            <div class="uf-field">
+                                <label for="data-fine">Data Fine</label>
+                                <input type="datetime-local" id="data-fine" name="data_fine"
+                                       value="<?= htmlspecialchars($_POST['data_fine'] ?? '') ?>"
+                                       required onchange="updateDuration()">
+                            </div>
+                        </div>
+
+                        <div id="uf-duration-preview" class="uf-duration-preview" style="display:none;">
+                            <span class="uf-duration-icon">⏱️</span>
+                            <span id="uf-duration-text"></span>
+                        </div>
+
+                        <div id="uf-form-error" class="uf-form-error" style="display:none;"></div>
+
+                        <button type="submit" class="uf-submit-btn" id="submit-btn">
+                            Conferma Prenotazione
+                        </button>
+                    </form>
+                </div>
+
+            </div><!-- /.uf-panel-body -->
+        </div><!-- /.uf-side-panel -->
+
+    </div><!-- /.uf-map-layout -->
+
+    <!-- ── Le tue prenotazioni attive ─────────────────── -->
+    <div class="uf-bookings-strip">
+        <div class="uf-strip-header">
+            <p class="uf-strip-title">Le tue prenotazioni attive</p>
+            <span class="uf-count-badge"><?= count($userBookings) ?></span>
         </div>
 
-        <!-- ── RIGHT ───────────────────────────────────── -->
-        <div class="uf-right">
-
-            <!-- Le tue prenotazioni attive -->
-            <div class="uf-panel">
-                <div class="uf-panel-header">
-                    <p class="uf-panel-title">Le tue prenotazioni attive</p>
-                    <span class="uf-count-badge"><?= count($userBookings) ?></span>
-                </div>
-
-                <?php if (empty($userBookings)): ?>
-                    <div class="uf-empty">
-                        <span>🏢</span>
-                        <p>Nessuna prenotazione ufficio attiva</p>
-                    </div>
-                <?php else: ?>
-                    <div class="uf-bookings-list">
-                        <?php foreach ($userBookings as $b): ?>
-                            <?php
-                                $start    = new DateTime($b['data_inizio']);
-                                $end      = new DateTime($b['data_fine']);
-                                $now      = new DateTime();
-                                $isActive = $start <= $now && $end >= $now;
-                                $statusClass = $isActive ? 'uf-status--now' : 'uf-status--future';
-                                $statusLabel = $isActive ? 'In corso' : 'Programmato';
-
-                                $diff   = $start->diff($end);
-                                $days   = $diff->days;
-                                $hours  = $diff->h;
-                                $durStr = $days > 0 ? "{$days}g {$hours}h" : "{$hours}h {$diff->i}m";
-                            ?>
-                            <div class="uf-booking-item">
-                                <div class="uf-booking-top">
-                                    <span class="uf-asset-pill"><?= htmlspecialchars($b['codice_asset']) ?></span>
-                                    <span class="uf-status-pill <?= $statusClass ?>"><?= $statusLabel ?></span>
-                                    <span class="uf-dur"><?= $durStr ?></span>
-                                </div>
-                                <div class="uf-booking-dates">
-                                    <?= date('d/m/Y H:i', strtotime($b['data_inizio'])) ?>
-                                    <span class="uf-arrow">→</span>
-                                    <?= date('d/m/Y H:i', strtotime($b['data_fine'])) ?>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
+        <?php if (empty($userBookings)): ?>
+            <div class="uf-empty">
+                <span>🏢</span>
+                <p>Nessuna prenotazione ufficio attiva</p>
             </div>
-
-            <!-- Elenco uffici -->
-            <div class="uf-panel">
-                <div class="uf-panel-header">
-                    <p class="uf-panel-title">Elenco Uffici</p>
-                    <span class="uf-count-badge"><?= count($officeSpots) ?></span>
-                </div>
-
-                <?php if (empty($officeSpots)): ?>
-                    <div class="uf-empty">
-                        <span>🏢</span>
-                        <p>Nessun ufficio disponibile</p>
+        <?php else: ?>
+            <div class="uf-bookings-list">
+                <?php foreach ($userBookings as $b): ?>
+                    <?php
+                        $start    = new DateTime($b['data_inizio']);
+                        $end      = new DateTime($b['data_fine']);
+                        $now      = new DateTime();
+                        $isActive = $start <= $now && $end >= $now;
+                        $statusClass = $isActive ? 'uf-status--now'    : 'uf-status--future';
+                        $statusLabel = $isActive ? 'In corso' : 'Programmato';
+                        $diff   = $start->diff($end);
+                        $days   = $diff->days;
+                        $hours  = $diff->h;
+                        $durStr = $days > 0 ? "{$days}g {$hours}h" : "{$hours}h {$diff->i}m";
+                    ?>
+                    <div class="uf-booking-item">
+                        <div class="uf-booking-top">
+                            <span class="uf-asset-pill"><?= htmlspecialchars($b['codice_asset']) ?></span>
+                            <span class="uf-status-pill <?= $statusClass ?>"><?= $statusLabel ?></span>
+                            <span class="uf-dur"><?= $durStr ?></span>
+                        </div>
+                        <div class="uf-booking-dates">
+                            <?= date('d/m/Y H:i', strtotime($b['data_inizio'])) ?>
+                            <span class="uf-arrow">→</span>
+                            <?= date('d/m/Y H:i', strtotime($b['data_fine'])) ?>
+                        </div>
                     </div>
-                <?php else: ?>
-                    <div class="uf-table-wrap">
-                        <table class="uf-table">
-                            <thead>
-                                <tr>
-                                    <th>Codice</th>
-                                    <th>N° Ufficio</th>
-                                    <th>Piano</th>
-                                    <th>Capacità</th>
-                                    <th>Tel. Interno</th>
-                                    <th>Stato</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($officeSpots as $id => $spot): ?>
-                                    <?php
-                                        $isOcc   = strtolower($spot['status']) === 'occupato';
-                                        $pillCls = $isOcc ? 'uf-status--occ' : 'uf-status--avail';
-                                        $pillLbl = $isOcc ? 'Occupato' : 'Disponibile';
-                                    ?>
-                                    <tr class="uf-table-row" id="row-<?= $id ?>"
-                                        onclick="selectOfficeFromTable(<?= $id ?>)">
-                                        <td>
-                                            <span class="uf-asset-pill uf-asset-pill--sm">
-                                                <?= htmlspecialchars($spot['name']) ?>
-                                            </span>
-                                        </td>
-                                        <td><?= htmlspecialchars($spot['numero_ufficio']) ?></td>
-                                        <td><?= htmlspecialchars($spot['piano']) ?></td>
-                                        <td><?= htmlspecialchars($spot['capacita']) ?></td>
-                                        <td><?= htmlspecialchars($spot['telefono_interno']) ?></td>
-                                        <td>
-                                            <span class="uf-status-pill <?= $pillCls ?>">
-                                                <?= $pillLbl ?>
-                                            </span>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php endif; ?>
+                <?php endforeach; ?>
             </div>
+        <?php endif; ?>
+    </div>
 
-        </div><!-- /.uf-right -->
-    </div><!-- /.uf-grid -->
 </div><!-- /.uf-page -->
 
 <script>
 // ── Dati slot occupati (PHP → JS) ─────────────────────
-const occupiedSlots = <?= json_encode($occupiedSlotsByAsset) ?>;
+const occupiedSlots  = <?= json_encode($occupiedSlotsByAsset) ?>;
+const reopenAssetId  = <?= $reopenAssetId ?>;
 
-// ── Selezione ufficio da dropdown ─────────────────────
-function onOfficeChange(select) {
-    const opt    = select.options[select.selectedIndex];
-    const id     = select.value;
-    const detail = document.getElementById('uf-detail-card');
-    const slots  = document.getElementById('uf-slots-section');
+// ── Apri pannello laterale ────────────────────────────
+function openOfficePanel(id) {
+    const card = document.getElementById('card-' + id);
+    if (!card) return;
 
-    // Highlight riga tabella
-    document.querySelectorAll('.uf-table-row').forEach(r => r.classList.remove('uf-table-row--selected'));
-    if (id) document.getElementById('row-' + id)?.classList.add('uf-table-row--selected');
+    // Selezione visiva card
+    document.querySelectorAll('.uf-office-card').forEach(c => c.classList.remove('uf-office-card--selected'));
+    card.classList.add('uf-office-card--selected');
 
-    if (!id) {
-        detail.style.display = 'none';
-        slots.style.display  = 'none';
-        return;
-    }
+    const code     = card.dataset.code;
+    const stato    = card.dataset.stato;
+    const numero   = card.dataset.numero;
+    const piano    = card.dataset.piano;
+    const capacita = card.dataset.capacita;
+    const telefono = card.dataset.telefono;
+    const isOcc    = stato.toLowerCase() === 'occupato';
 
-    // Detail card
-    const stato = opt.dataset.stato || '—';
-    const isOcc = stato.toLowerCase() === 'occupato';
-    detail.style.display = '';
-    detail.innerHTML = `
-        <div class="uf-detail-row">
-            <span class="uf-detail-key">Codice</span>
-            <span class="uf-detail-val">${opt.dataset.code}</span>
+    // Header pannello
+    document.getElementById('panel-title').textContent = code;
+    document.getElementById('panel-status-pill').innerHTML =
+        `<span class="uf-status-pill ${isOcc ? 'uf-status--occ' : 'uf-status--avail'}">
+            ${isOcc ? 'Occupato' : 'Disponibile'}
+         </span>`;
+
+    // Info tiles
+    document.getElementById('panel-info-grid').innerHTML = `
+        <div class="uf-info-tile">
+            <span class="uf-info-tile-label">N° Ufficio</span>
+            <span class="uf-info-tile-val">${numero}</span>
         </div>
-        <div class="uf-detail-row">
-            <span class="uf-detail-key">N° Ufficio</span>
-            <span class="uf-detail-val">${opt.dataset.numero || '—'}</span>
+        <div class="uf-info-tile">
+            <span class="uf-info-tile-label">Piano</span>
+            <span class="uf-info-tile-val">${piano}</span>
         </div>
-        <div class="uf-detail-row">
-            <span class="uf-detail-key">Piano</span>
-            <span class="uf-detail-val">${opt.dataset.piano || '—'}</span>
+        <div class="uf-info-tile">
+            <span class="uf-info-tile-label">Capacità</span>
+            <span class="uf-info-tile-val">${capacita}</span>
         </div>
-        <div class="uf-detail-row">
-            <span class="uf-detail-key">Capacità</span>
-            <span class="uf-detail-val">${opt.dataset.capacita || '—'}</span>
-        </div>
-        <div class="uf-detail-row">
-            <span class="uf-detail-key">Tel. Interno</span>
-            <span class="uf-detail-val">${opt.dataset.telefono || '—'}</span>
-        </div>
-        <div class="uf-detail-row">
-            <span class="uf-detail-key">Stato attuale</span>
-            <span class="uf-detail-val">
-                <span class="uf-status-pill ${isOcc ? 'uf-status--occ' : 'uf-status--avail'}">
-                    ${isOcc ? 'Occupato' : 'Disponibile'}
-                </span>
-            </span>
-        </div>
-    `;
+        <div class="uf-info-tile">
+            <span class="uf-info-tile-label">Tel. Interno</span>
+            <span class="uf-info-tile-val">${telefono}</span>
+        </div>`;
 
     // Slot occupati
-    const assetSlots = occupiedSlots[id] || [];
-    slots.style.display = '';
-    const list = document.getElementById('uf-slots-list');
-    if (assetSlots.length > 0) {
-        list.innerHTML = assetSlots.map(s => `
+    const slots   = occupiedSlots[id] || [];
+    const slotsEl = document.getElementById('panel-slots');
+    if (slots.length > 0) {
+        slotsEl.innerHTML = slots.map(s => `
             <div class="uf-slot-item">
-                <div class="uf-slot-range">
-                    <span>${formatDate(s.inizio)}</span>
-                    <span>→</span>
-                    <span>${formatDate(s.fine)}</span>
-                </div>
-            </div>
-        `).join('');
+                <span class="uf-slot-dot"></span>
+                <span>${formatDate(s.inizio)}</span>
+                <span class="uf-slot-arrow">→</span>
+                <span>${formatDate(s.fine)}</span>
+            </div>`).join('');
     } else {
-        list.innerHTML = '<p class="uf-slots-empty">✓ Nessun periodo occupato</p>';
+        slotsEl.innerHTML = '<div class="uf-slots-empty-msg">✓ Nessun periodo occupato — ufficio libero</div>';
     }
+
+    // Collega id_asset al form
+    document.getElementById('panel-asset-id').value = id;
+
+    // Apri pannello con animazione
+    document.getElementById('side-panel').classList.add('open');
 }
 
-// ── Selezione ufficio da riga tabella ─────────────────
-function selectOfficeFromTable(id) {
-    const select = document.getElementById('select-office');
-    select.value = id;
-    onOfficeChange(select);
-    select.scrollIntoView({ behavior: 'smooth', block: 'center' });
+// ── Chiudi pannello ───────────────────────────────────
+function closeOfficePanel() {
+    document.getElementById('side-panel').classList.remove('open');
+    document.querySelectorAll('.uf-office-card').forEach(c => c.classList.remove('uf-office-card--selected'));
 }
 
-// ── Aggiorna preview durata ───────────────────────────
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeOfficePanel(); });
+
+// ── Preview durata ────────────────────────────────────
 function updateDuration() {
     const start   = document.getElementById('data-inizio').value;
     const end     = document.getElementById('data-fine').value;
@@ -474,7 +479,7 @@ function updateDuration() {
     preview.style.display = '';
     document.getElementById('submit-btn').disabled = false;
 
-    let parts = [];
+    const parts = [];
     if (days > 0) parts.push(`${days} giorn${days > 1 ? 'i' : 'o'}`);
     if (hrs  > 0) parts.push(`${hrs} or${hrs > 1 ? 'e' : 'a'}`);
     if (mins > 0) parts.push(`${mins} minut${mins > 1 ? 'i' : 'o'}`);
@@ -483,18 +488,17 @@ function updateDuration() {
 
 // ── Helper: formatta data ─────────────────────────────
 function formatDate(str) {
-    const d = new Date(str);
-    return d.toLocaleString('it-IT', {
+    return new Date(str).toLocaleString('it-IT', {
         day: '2-digit', month: '2-digit', year: 'numeric',
         hour: '2-digit', minute: '2-digit'
     });
 }
 
-// ── Init al caricamento ───────────────────────────────
+// ── Init ──────────────────────────────────────────────
 (function init() {
-    const sel = document.getElementById('select-office');
-    if (sel.value) onOfficeChange(sel);
     updateDuration();
+    // Riapri pannello ufficio selezionato dopo POST (es. errore o conferma)
+    if (reopenAssetId) openOfficePanel(reopenAssetId);
 })();
 </script>
 

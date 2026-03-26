@@ -12,7 +12,6 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true || !isset(
 $id_utente = (int)$_SESSION['id_utente'];
 
 // ── POST: cancel ──────────────────────────────────────
-// Gestito prima dell'ob_start per poter restituire JSON pulito
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'cancel') {
     header('Content-Type: application/json');
 
@@ -36,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'cance
             throw new Exception('Prenotazione non trovata o non autorizzato.');
         }
 
-        // Elimina prenotazione
+        // Elimina la prenotazione dalla tabella prenotazioni
         $stmt = $conn->prepare("DELETE FROM prenotazioni WHERE id_prenotazione = ? AND id_utente = ?");
         $stmt->bind_param("ii", $id_prenotazione, $id_utente);
         if (!$stmt->execute()) throw new Exception('Errore durante l\'annullamento della prenotazione.');
@@ -122,7 +121,7 @@ $stmt->close();
                             </div>
                         </div>
                         <div class="booking-actions">
-                            <button class="btn-cancel" onclick="cancelBooking(<?= $b['id_prenotazione'] ?>)">Annulla</button>
+                            <button class="btn-cancel" onclick="cancelBooking(<?= $b['id_prenotazione'] ?>)">Annulla prenotazione</button>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -131,4 +130,4 @@ $stmt->close();
     </div>
 </div>
 
-<script src="modali/user-bookings-modal.js"></script>
+<!-- Il JS viene caricato una sola volta dalla pagina principale tramite index.php -->

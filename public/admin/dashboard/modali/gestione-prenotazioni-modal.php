@@ -139,4 +139,4 @@ if ($result) {
     </div>
 </div>
 
-<script src="modali/gestione-prenotazioni-modal.js"></script>
+<!-- Il JS viene caricato una sola volta dalla pagina principale tramite index.php -->
