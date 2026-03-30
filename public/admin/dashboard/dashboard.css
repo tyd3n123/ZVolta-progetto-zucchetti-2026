@@ -239,6 +239,7 @@ body {
   border-bottom: none;
 }
 
+
 /* Cards inside the top section arranged horizontally */
 .booking-cards-row {
   display: grid;
@@ -259,6 +260,8 @@ body {
   border: 1px solid var(--clr-border);
   border-radius: var(--radius-lg);
   padding: 20px;
+  margin-top: 10px;
+  margin-bottom: 10px;
   cursor: pointer;
   transition: var(--transition);
   display: flex;

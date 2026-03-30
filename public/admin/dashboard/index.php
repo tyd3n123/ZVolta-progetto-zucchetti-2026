@@ -142,10 +142,19 @@ if ($result) while ($row = $result->fetch_assoc()) $employees[] = $row;
 <!-- ── Main Layout ────────────────────────────────────── -->
 <div class="dashboard-container">
 
-
+    <!-- Colonna sinistra: prenota -->
+        <div class="booking-card" onclick="location.href='./asset-disponibili.php'">
+            <div class="card-content">
+                <h3>Prenotazioni</h3>
+                <p>Prenota sale riunioni, uffici o parcheggi</p>
+                <button class="book-btn">Prenota ora</button>
+            </div>
+        </div>
 
     <!-- Colonna destra: prenotazioni + utenti -->
     <div class="bookings-section">
+
+
         <div class="bookings-row">
 
             <!-- Le tue prenotazioni -->
@@ -210,33 +219,6 @@ if ($result) while ($row = $result->fetch_assoc()) $employees[] = $row;
                             </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
-                </div>
-            </div>
-
-            
-            <!-- Colonna sinistra: prenota -->
-            <div class="column">
-                <h2>Prenota</h2>
-                <div class="booking-card" onclick="location.href='../sale-riunioni/index.php'">
-                    <div class="card-content">
-                        <h3>🪑 Sale riunioni</h3>
-                        <p>Prenota sale attrezzate per meeting e presentazioni</p>
-                        <button class="book-btn">Prenota →</button>
-                    </div>
-                </div>
-                <div class="booking-card" onclick="location.href='../uffici/index.php'">
-                    <div class="card-content">
-                        <h3>🖥️ Uffici</h3>
-                        <p>Prenota uffici e postazioni lavoro</p>
-                        <button class="book-btn" >Prenota</button>
-                    </div>
-                </div>
-                <div class="booking-card" onclick="location.href='../parcheggi/index.php'">
-                    <div class="card-content">
-                        <h3>🚗 Parcheggi</h3>
-                        <p>Prenota posti auto e moto</p>
-                        <button class="book-btn">Prenota →</button>
-                    </div>
                 </div>
             </div>
 

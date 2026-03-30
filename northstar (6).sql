@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Mar 26, 2026 at 12:13 PM
+-- Generation Time: Mar 30, 2026 at 11:34 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -32,25 +32,9 @@ CREATE TABLE `asset` (
   `codice_asset` varchar(20) NOT NULL,
   `id_tipologia` int(11) NOT NULL,
   `stato` enum('Disponibile','Occupato','Non prenotabile') DEFAULT 'Disponibile',
-  `mappa` enum('Sede','Parcheggio') NOT NULL
+  `mappa` enum('Sede','Parcheggio') NOT NULL,
+  `piano` int(11) DEFAULT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
-
---
--- Dumping data for table `asset`
---
-
-INSERT INTO `asset` (`id_asset`, `codice_asset`, `id_tipologia`, `stato`, `mappa`) VALUES
-(1, 'Sala Riunioni A', 1, 'Disponibile', 'Sede'),
-(2, 'Sala Riunioni B', 1, 'Disponibile', 'Sede'),
-(3, 'Sala Riunioni C', 1, 'Disponibile', 'Sede'),
-(4, 'Parcheggio A', 2, 'Disponibile', 'Parcheggio'),
-(5, 'Parcheggio B', 2, 'Disponibile', 'Parcheggio'),
-(6, 'Parcheggio C', 2, 'Occupato', 'Parcheggio'),
-(7, 'Parcheggio D', 2, 'Disponibile', 'Parcheggio'),
-(8, 'Ufficio A', 3, 'Disponibile', 'Sede'),
-(9, 'Ufficio B', 3, 'Disponibile', 'Sede'),
-(10, 'Ufficio C', 3, 'Disponibile', 'Sede'),
-(11, 'Ufficio D', 3, 'Occupato', 'Sede');
 
 -- --------------------------------------------------------
 
@@ -113,17 +97,9 @@ CREATE TABLE `prenotazioni` (
   `id_asset` int(11) NOT NULL,
   `data_inizio` datetime NOT NULL,
   `data_fine` datetime NOT NULL,
-  `numero_modifiche` int(11) DEFAULT 0,
+  `modificata` tinyint(1) DEFAULT 0,
   `attiva` tinyint(1) DEFAULT 1
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
-
---
--- Dumping data for table `prenotazioni`
---
-
-INSERT INTO `prenotazioni` (`id_prenotazione`, `id_utente`, `id_asset`, `data_inizio`, `data_fine`, `numero_modifiche`, `attiva`) VALUES
-(19, 1, 11, '2026-03-25 11:55:00', '2026-03-25 13:00:00', 0, 1),
-(18, 1, 11, '2026-03-25 08:00:00', '2026-03-25 12:00:00', 0, 1);
 
 -- --------------------------------------------------------
 
@@ -309,7 +285,7 @@ ALTER TABLE `utenti`
 -- AUTO_INCREMENT for table `asset`
 --
 ALTER TABLE `asset`
-  MODIFY `id_asset` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id_asset` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `parcheggio_dettagli`
@@ -321,7 +297,7 @@ ALTER TABLE `parcheggio_dettagli`
 -- AUTO_INCREMENT for table `prenotazioni`
 --
 ALTER TABLE `prenotazioni`
-  MODIFY `id_prenotazione` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `id_prenotazione` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `ruoli`
