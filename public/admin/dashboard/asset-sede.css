@@ -4,11 +4,12 @@
 
 /* ── Page Layout ─────────────────────────────────────── */
 .asset-sede-page {
-  background: linear-gradient(135deg, var(--clr-surface) 0%, var(--clr-surface-2) 100%);
-  padding: 16px 20px 32px;
+  background: var(--clr-bg-page);
+  min-height: calc(100vh - 64px);
+  padding: 40px 20px 48px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 32px;
   box-sizing: border-box;
 }
 
