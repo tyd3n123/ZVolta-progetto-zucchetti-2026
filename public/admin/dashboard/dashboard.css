@@ -56,13 +56,16 @@ html { scroll-behavior: smooth; }
 
 body {
   font-family: var(--font-body);
-  background-color: var(--clr-bg-page);
-  background-image:
-    radial-gradient(ellipse 80% 60% at 60% -10%, rgba(91,79,207,.35) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 40% at 100% 80%, rgba(124,58,237,.18) 0%, transparent 60%);
+  background-image: url('../../assets/BackGround1.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   min-height: 100vh;
   color: var(--clr-text-1);
   -webkit-font-smoothing: antialiased;
+  margin: 0;
+  padding: 0;
 }
 
 /* ══════════════════════════════════════════════════════
