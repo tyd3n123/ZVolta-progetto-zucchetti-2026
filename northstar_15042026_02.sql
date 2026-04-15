@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 15, 2026 at 03:52 PM
+-- Generation Time: Apr 15, 2026 at 04:35 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -56,7 +56,62 @@ INSERT INTO `asset` (`id_asset`, `codice_asset`, `id_tipologia`, `stato`, `mappa
 (13, 'AUTO-C-013', 0, 'Disponibile', 'Parcheggio', NULL),
 (14, 'AUTO-C-014', 0, 'Disponibile', 'Parcheggio', NULL),
 (15, 'AUTO-C-015', 0, 'Disponibile', 'Parcheggio', NULL),
-(16, 'AUTO-C-016', 0, 'Disponibile', 'Parcheggio', NULL);
+(16, 'AUTO-C-016', 0, 'Disponibile', 'Parcheggio', NULL),
+(27, 'TIPO-A-011', 1, 'Disponibile', 'Sede', NULL),
+(26, 'TIPO-A-010', 1, 'Disponibile', 'Sede', NULL),
+(25, 'TIPO-A-009', 1, 'Disponibile', 'Sede', NULL),
+(24, 'TIPO-A-008', 1, 'Disponibile', 'Sede', NULL),
+(23, 'TIPO-A-007', 1, 'Disponibile', 'Sede', NULL),
+(22, 'TIPO-A-006', 1, 'Disponibile', 'Sede', NULL),
+(21, 'TIPO-A-005', 1, 'Disponibile', 'Sede', NULL),
+(20, 'TIPO-A-004', 1, 'Disponibile', 'Sede', NULL),
+(17, 'TIPO-A-001', 1, 'Disponibile', 'Sede', NULL),
+(18, 'TIPO-A-002', 1, 'Disponibile', 'Sede', NULL),
+(19, 'TIPO-A-003', 1, 'Disponibile', 'Sede', NULL),
+(49, 'TIPO-A2-013', 2, 'Disponibile', 'Sede', NULL),
+(48, 'TIPO-A2-012', 2, 'Disponibile', 'Sede', NULL),
+(47, 'TIPO-A2-011', 2, 'Disponibile', 'Sede', NULL),
+(46, 'TIPO-A2-010', 2, 'Disponibile', 'Sede', NULL),
+(45, 'TIPO-A2-009', 2, 'Disponibile', 'Sede', NULL),
+(44, 'TIPO-A2-008', 2, 'Disponibile', 'Sede', NULL),
+(43, 'TIPO-A2-007', 2, 'Disponibile', 'Sede', NULL),
+(42, 'TIPO-A2-006', 2, 'Disponibile', 'Sede', NULL),
+(41, 'TIPO-A2-005', 2, 'Disponibile', 'Sede', NULL),
+(40, 'TIPO-A2-004', 2, 'Disponibile', 'Sede', NULL),
+(39, 'TIPO-A2-003', 2, 'Disponibile', 'Sede', NULL),
+(38, 'TIPO-A2-002', 2, 'Disponibile', 'Sede', NULL),
+(37, 'TIPO-A2-001', 2, 'Disponibile', 'Sede', NULL),
+(36, 'TIPO-A-020', 1, 'Disponibile', 'Sede', NULL),
+(35, 'TIPO-A-019', 1, 'Disponibile', 'Sede', NULL),
+(34, 'TIPO-A-018', 1, 'Disponibile', 'Sede', NULL),
+(33, 'TIPO-A-017', 1, 'Disponibile', 'Sede', NULL),
+(32, 'TIPO-A-016', 1, 'Disponibile', 'Sede', NULL),
+(31, 'TIPO-A-015', 1, 'Disponibile', 'Sede', NULL),
+(30, 'TIPO-A-014', 1, 'Disponibile', 'Sede', NULL),
+(29, 'TIPO-A-013', 1, 'Disponibile', 'Sede', NULL),
+(28, 'TIPO-A-012', 1, 'Disponibile', 'Sede', NULL),
+(64, 'TIPO-A2-028', 2, 'Disponibile', 'Sede', NULL),
+(63, 'TIPO-A2-027', 2, 'Disponibile', 'Sede', NULL),
+(62, 'TIPO-A2-026', 2, 'Disponibile', 'Sede', NULL),
+(61, 'TIPO-A2-025', 2, 'Disponibile', 'Sede', NULL),
+(60, 'TIPO-A2-024', 2, 'Disponibile', 'Sede', NULL),
+(59, 'TIPO-A2-023', 2, 'Disponibile', 'Sede', NULL),
+(58, 'TIPO-A2-022', 2, 'Disponibile', 'Sede', NULL),
+(57, 'TIPO-A2-021', 2, 'Disponibile', 'Sede', NULL),
+(56, 'TIPO-A2-020', 2, 'Disponibile', 'Sede', NULL),
+(55, 'TIPO-A2-019', 2, 'Disponibile', 'Sede', NULL),
+(54, 'TIPO-A2-018', 2, 'Disponibile', 'Sede', NULL),
+(53, 'TIPO-A2-017', 2, 'Disponibile', 'Sede', NULL),
+(52, 'TIPO-A2-016', 2, 'Disponibile', 'Sede', NULL),
+(51, 'TIPO-A2-015', 2, 'Disponibile', 'Sede', NULL),
+(50, 'TIPO-A2-014', 2, 'Disponibile', 'Sede', NULL),
+(65, 'TIPO-A2-029', 2, 'Disponibile', 'Sede', NULL),
+(66, 'TIPO-A2-030', 2, 'Disponibile', 'Sede', NULL),
+(121, 'SALA-001', 3, 'Disponibile', 'Sede', 1),
+(122, 'SALA-002', 3, 'Disponibile', 'Sede', 1),
+(123, 'SALA-003', 3, 'Disponibile', 'Sede', 2),
+(124, 'SALA-004', 3, 'Disponibile', 'Sede', 2),
+(125, 'SALA-005', 3, 'Disponibile', 'Sede', 3);
 
 -- --------------------------------------------------------
 
@@ -319,7 +374,7 @@ ALTER TABLE `utenti`
 -- AUTO_INCREMENT for table `asset`
 --
 ALTER TABLE `asset`
-  MODIFY `id_asset` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id_asset` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=126;
 
 --
 -- AUTO_INCREMENT for table `parcheggio_dettagli`
