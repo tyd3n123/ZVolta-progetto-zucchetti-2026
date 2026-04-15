@@ -2,8 +2,8 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: localhost:3306
--- Generation Time: Mar 30, 2026 at 11:34 AM
+-- Host: 127.0.0.1
+-- Generation Time: Apr 15, 2026 at 03:52 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -36,6 +36,28 @@ CREATE TABLE `asset` (
   `piano` int(11) DEFAULT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
+--
+-- Dumping data for table `asset`
+--
+
+INSERT INTO `asset` (`id_asset`, `codice_asset`, `id_tipologia`, `stato`, `mappa`, `piano`) VALUES
+(1, 'AUTO-C-001', 0, 'Disponibile', 'Parcheggio', NULL),
+(2, 'AUTO-C-002', 0, 'Disponibile', 'Parcheggio', NULL),
+(3, 'AUTO-C-003', 0, 'Disponibile', 'Parcheggio', NULL),
+(4, 'AUTO-C-004', 0, 'Disponibile', 'Parcheggio', NULL),
+(5, 'AUTO-C-005', 0, 'Disponibile', 'Parcheggio', NULL),
+(6, 'AUTO-C-006', 0, 'Disponibile', 'Parcheggio', NULL),
+(7, 'AUTO-C-007', 0, 'Disponibile', 'Parcheggio', NULL),
+(8, 'AUTO-C-008', 0, 'Disponibile', 'Parcheggio', NULL),
+(9, 'AUTO-C-009', 0, 'Disponibile', 'Parcheggio', NULL),
+(10, 'AUTO-C-010', 0, 'Disponibile', 'Parcheggio', NULL),
+(11, 'AUTO-C-011', 0, 'Disponibile', 'Parcheggio', NULL),
+(12, 'AUTO-C-012', 0, 'Disponibile', 'Parcheggio', NULL),
+(13, 'AUTO-C-013', 0, 'Disponibile', 'Parcheggio', NULL),
+(14, 'AUTO-C-014', 0, 'Disponibile', 'Parcheggio', NULL),
+(15, 'AUTO-C-015', 0, 'Disponibile', 'Parcheggio', NULL),
+(16, 'AUTO-C-016', 0, 'Disponibile', 'Parcheggio', NULL);
+
 -- --------------------------------------------------------
 
 --
@@ -56,10 +78,22 @@ CREATE TABLE `parcheggio_dettagli` (
 --
 
 INSERT INTO `parcheggio_dettagli` (`id_parcheggio`, `id_asset`, `numero_posto`, `coperto`, `colonnina_elettrica`, `posizione`) VALUES
-(5, 4, 0, 1, 0, 'Piano Terra'),
-(6, 5, 0, 1, 1, 'Piano Terra'),
-(7, 6, 0, 0, 0, 'Esterno'),
-(8, 7, 0, 0, 1, 'Esterno');
+(1, 1, 1, 1, 1, 'Piano Terra'),
+(2, 2, 2, 1, 1, 'Piano Terra'),
+(3, 3, 3, 1, 1, 'Piano Terra'),
+(4, 4, 4, 1, 1, 'Piano Terra'),
+(5, 5, 5, 1, 1, 'Piano Terra'),
+(6, 6, 6, 1, 1, 'Piano Terra'),
+(7, 7, 7, 1, 1, 'Piano Terra'),
+(8, 8, 8, 1, 1, 'Piano Terra'),
+(9, 9, 9, 0, 0, 'Piano Terra'),
+(10, 10, 10, 0, 0, 'Piano Terra'),
+(11, 11, 11, 0, 0, 'Piano Terra'),
+(12, 12, 12, 0, 0, 'Piano Terra'),
+(13, 13, 13, 0, 0, 'Piano Terra'),
+(14, 14, 14, 0, 0, 'Piano Terra'),
+(15, 15, 15, 0, 0, 'Piano Terra'),
+(16, 16, 16, 0, 0, 'Piano Terra');
 
 -- --------------------------------------------------------
 
@@ -291,13 +325,13 @@ ALTER TABLE `asset`
 -- AUTO_INCREMENT for table `parcheggio_dettagli`
 --
 ALTER TABLE `parcheggio_dettagli`
-  MODIFY `id_parcheggio` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id_parcheggio` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `prenotazioni`
 --
 ALTER TABLE `prenotazioni`
-  MODIFY `id_prenotazione` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id_prenotazione` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT for table `ruoli`
