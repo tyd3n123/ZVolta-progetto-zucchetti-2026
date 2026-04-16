@@ -202,7 +202,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
     <!-- Title row -->
     <div class="sr-title-row">
         <div>
-            <h2 class="sr-page-title">🏢 Sale Riunioni</h2>
+            <h2 class="sr-page-title">Sale Riunioni</h2>
             <p class="sr-page-sub">Clicca su una sala nella planimetria per prenotarla</p>
         </div>
     </div>
@@ -225,7 +225,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
         <div class="sr-map-zone" id="map-zone">
 
             <div class="sr-map-header">
-                <p class="sr-map-title">📍 Planimetria Sale Riunioni — Sede</p>
+                <p class="sr-map-title">Planimetria Sale Riunioni — Sede</p>
                 <div class="sr-map-legend">
                     <div class="sr-legend-item">
                         <span class="sr-legend-dot sr-legend-dot--avail"></span>Disponibile
@@ -238,7 +238,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
 
             <!-- Stats bar -->
             <div class="sr-map-stats">
-                <span class="sr-stat-chip sr-stat-chip--total">🏢 <?= $totalRooms ?> sale</span>
+                <span class="sr-stat-chip sr-stat-chip--total"><?= $totalRooms ?> sale</span>
                 <span class="sr-stat-chip sr-stat-chip--avail">✓ <?= $availCount ?> disponibili</span>
                 <?php if ($occCount > 0): ?>
                     <span class="sr-stat-chip sr-stat-chip--occ">✗ <?= $occCount ?> occupate</span>
@@ -248,7 +248,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
             <!-- Canvas planimetria -->
             <?php if (empty($roomSpots)): ?>
                 <div class="sr-empty">
-                    <span>🏢</span>
+                    <span></span>
                     <p>Nessuna sala riunione disponibile</p>
                 </div>
             <?php else: ?>
@@ -328,7 +328,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
 
         <?php if (empty($userBookings)): ?>
             <div class="sr-empty">
-                <span>🏢</span>
+                <span></span>
                 <p>Nessuna prenotazione sala attiva</p>
             </div>
         <?php else: ?>
