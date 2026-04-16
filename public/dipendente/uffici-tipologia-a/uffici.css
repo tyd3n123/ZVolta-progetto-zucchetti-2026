@@ -1,0 +1,548 @@
+/* ═══════════════════════════════════════════════════════
+   NORTHSTAR — Uffici con Mappa Planimetrica Canvas
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Breadcrumb ─────────────────────────────────────── */
+.header-breadcrumb { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--clr-text-3) }
+.header-breadcrumb a { color:var(--clr-text-3); text-decoration:none; transition:var(--transition) }
+.header-breadcrumb a:hover { color:var(--clr-primary) }
+.bc-sep   { color:var(--clr-border) }
+.bc-current { color:var(--clr-text-2); font-weight:500 }
+
+/* ── Page ───────────────────────────────────────────── */
+.uf-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 28px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.uf-title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.uf-page-title { font-size:24px; font-weight:700; color:#ffffff; letter-spacing:-.5px; margin:0 0 4px }
+.uf-page-sub   { font-size:13px; color:rgba(255,255,255,.55); margin:0 }
+
+/* ── User pill ──────────────────────────────────────── */
+.uf-user-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.15);
+  color: rgba(255,255,255,.9); padding: 6px 14px;
+  border-radius: 20px; font-size: 13px; font-weight: 500;
+  backdrop-filter: blur(8px); white-space: nowrap;
+}
+.uf-role {
+  background: rgba(255,255,255,.15); padding: 2px 8px;
+  border-radius: 10px; font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .5px;
+}
+
+/* ── Stats chips ────────────────────────────────────── */
+.uf-stats-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap }
+.uf-stat-chip {
+  display: inline-flex; align-items: center; gap:6px;
+  padding: 5px 12px; border-radius: 20px;
+  font-size: 12px; font-weight: 600; border: 1px solid transparent;
+}
+.uf-stat-chip--total { background:var(--clr-surface-2); color:var(--clr-text-2); border-color:var(--clr-border) }
+.uf-stat-chip--avail { background:var(--clr-success-bg); color:var(--clr-success); border-color:#86efac }
+.uf-stat-chip--occ   { background:var(--clr-danger-bg);  color:var(--clr-danger);  border-color:#fca5a5 }
+
+/* ── Feedback banner ────────────────────────────────── */
+.uf-feedback {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 18px; border-radius: var(--radius-md);
+  font-size: 13px; font-weight: 500;
+  animation: ufSlide .25s ease;
+}
+@keyframes ufSlide { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+.uf-feedback--success { background:var(--clr-success-bg); color:var(--clr-success); border:1px solid #86efac }
+.uf-feedback--error   { background:var(--clr-danger-bg);  color:var(--clr-danger);  border:1px solid #fca5a5 }
+
+/* ══════════════════════════════════════════════════════
+   TAB PIANO
+   ══════════════════════════════════════════════════════ */
+.uf-floor-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.uf-floor-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--clr-border);
+  background: var(--clr-surface);
+  color: var(--clr-text-2);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.uf-floor-tab:hover {
+  border-color: var(--clr-primary);
+  color: var(--clr-primary);
+  background: var(--clr-accent-soft);
+}
+.uf-floor-tab.active {
+  background: var(--clr-primary);
+  color: #ffffff;
+  border-color: var(--clr-primary);
+  box-shadow: 0 2px 10px rgba(91,79,207,.35);
+}
+.uf-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255,255,255,.25);
+  color: inherit;
+}
+.uf-floor-tab:not(.active) .uf-tab-count {
+  background: var(--clr-surface-3);
+  color: var(--clr-text-3);
+}
+
+/* ══════════════════════════════════════════════════════
+   MAPPA PLANIMETRICA
+   ══════════════════════════════════════════════════════ */
+.uf-map-wrap {
+  display: flex;
+  gap: 0;
+  height: 600px;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  position: relative;
+  transition: width .35s cubic-bezier(.4,0,.2,1);
+}
+
+.uf-canvas-zone {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+}
+
+#floorCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: default;
+}
+
+/* Legenda sovrapposta */
+.uf-map-legend {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  display: flex;
+  gap: 12px;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  pointer-events: none;
+  box-shadow: var(--shadow-md);
+  flex-wrap: wrap;
+}
+.uf-leg-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--clr-text-2); font-weight: 500;
+}
+.uf-leg-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%; flex-shrink: 0;
+  border: 1px solid transparent;
+}
+
+/* ══════════════════════════════════════════════════════
+   PANNELLO LATERALE — fixed overlay (stile parcheggi)
+   ══════════════════════════════════════════════════════ */
+.uf-side-panel {
+  position: fixed;
+  top: 0; right: 0;
+  width: 520px;
+  height: 100vh;
+  background: var(--clr-surface);
+  border-left: 1px solid var(--clr-border);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform .35s cubic-bezier(.4,0,.2,1);
+  overflow: hidden;
+  z-index: 1000;
+  box-shadow: -8px 0 40px rgba(20,18,50,.22);
+}
+.uf-side-panel.open { transform: translateX(0) }
+
+/* Backdrop sfocato */
+.uf-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  backdrop-filter: blur(2px);
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .35s ease;
+}
+.uf-panel-backdrop.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.uf-panel-inner {
+  width: 100%;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* Scrollbar pannello */
+.uf-panel-inner::-webkit-scrollbar { width: 4px }
+.uf-panel-inner::-webkit-scrollbar-track { background: transparent }
+.uf-panel-inner::-webkit-scrollbar-thumb { background: var(--clr-border); border-radius: 4px }
+
+.uf-panel-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.uf-panel-name {
+  font-size: 17px; font-weight: 700;
+  color: var(--clr-text-1); margin: 0; letter-spacing: -.3px;
+}
+
+.uf-panel-close {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid var(--clr-border);
+  background: var(--clr-surface-2);
+  color: var(--clr-text-2); font-size: 13px; cursor: pointer;
+  transition: var(--transition); flex-shrink: 0; line-height: 1;
+}
+.uf-panel-close:hover {
+  background: var(--clr-danger-bg);
+  color: var(--clr-danger);
+  border-color: #fca5a5;
+}
+
+/* Badge disponibilità */
+.uf-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 12px; font-weight: 500;
+}
+.uf-badge::before {
+  content:''; width:6px; height:6px;
+  border-radius:50%; background:currentColor; display:block;
+}
+.uf-badge--avail { background:var(--clr-success-bg); color:var(--clr-success) }
+.uf-badge--occ   { background:var(--clr-danger-bg);  color:var(--clr-danger) }
+
+/* Info grid 2 colonne */
+.uf-info-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px }
+.uf-info-tile {
+  background: var(--clr-surface-2);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+}
+.uf-tile-lbl {
+  font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .5px;
+  color: var(--clr-text-3); margin-bottom: 3px;
+}
+.uf-tile-val {
+  font-size: 15px; font-weight: 700;
+  color: var(--clr-text-1); font-family: var(--font-mono);
+}
+
+/* Separatore */
+.uf-psep { height: 1px; background: var(--clr-border) }
+
+/* Label sezione */
+.uf-section-lbl {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .7px;
+  color: var(--clr-text-3); margin: 0;
+}
+
+/* ── Occupazione attuale (admin) ────────────────────── */
+.uf-current-booking {
+  background: var(--clr-danger-bg);
+  border: 1px solid #fca5a5;
+  border-left: 3px solid var(--clr-danger);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.uf-cb-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.uf-cb-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--clr-danger);
+  color: #ffffff;
+  font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.uf-cb-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.uf-cb-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--clr-text-1);
+}
+
+.uf-cb-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--clr-danger);
+}
+.uf-cb-pill::before {
+  content: '';
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--clr-danger);
+  animation: pulse 1.5s ease infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity:1 }
+  50%      { opacity:.3 }
+}
+
+.uf-cb-dates {
+  font-size: 11px;
+  color: var(--clr-text-2);
+  font-family: var(--font-mono);
+}
+
+/* Bottone annulla prenotazione */
+.uf-cancel-btn {
+  width: 100%;
+  padding: 7px 12px;
+  background: transparent;
+  color: var(--clr-danger);
+  border: 1px solid #fca5a5;
+  border-radius: var(--radius-md);
+  font-size: 12px; font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: center;
+}
+.uf-cancel-btn:hover {
+  background: var(--clr-danger);
+  color: #ffffff;
+  border-color: var(--clr-danger);
+}
+
+/* ── Slot occupati ───────────────────────────────────── */
+.uf-slot-item {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--clr-danger-bg);
+  border: 1px solid #fca5a5;
+  border-left: 3px solid var(--clr-danger);
+  border-radius: var(--radius-md);
+  padding: 7px 10px;
+  font-size: 11px; color: var(--clr-text-2);
+  font-weight: 500; font-family: var(--font-mono);
+  flex-wrap: wrap;
+}
+.uf-slot-dot  { width:6px; height:6px; border-radius:50%; background:var(--clr-danger); flex-shrink:0 }
+.uf-slot-arrow { color: var(--clr-text-3) }
+
+.uf-slot-free {
+  background: var(--clr-success-bg);
+  border: 1px solid #86efac;
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-size: 12px; color: var(--clr-success); font-weight: 600;
+}
+
+/* ── Form prenotazione ───────────────────────────────── */
+.uf-field        { display:flex; flex-direction:column; gap:5px }
+.uf-field-lbl    { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; color:var(--clr-text-3) }
+.uf-field-input  {
+  width: 100%; padding: 9px 11px;
+  border: 1px solid var(--clr-border); border-radius: var(--radius-md);
+  font-size: 13px; font-family: var(--font-body);
+  color: var(--clr-text-1); background: var(--clr-surface);
+  transition: var(--transition); cursor: pointer; box-sizing: border-box;
+}
+.uf-field-input:focus {
+  outline: none;
+  border-color: var(--clr-primary);
+  box-shadow: 0 0 0 3px rgba(91,79,207,.12);
+}
+
+.uf-dur-preview {
+  font-size: 12px; color: var(--clr-text-2);
+  background: var(--clr-surface-2);
+  border: 1px solid var(--clr-border);
+  padding: 7px 11px; border-radius: var(--radius-md);
+}
+.uf-form-error {
+  font-size: 12px; color: var(--clr-danger);
+  background: var(--clr-danger-bg);
+  border: 1px solid #fca5a5;
+  padding: 8px 11px; border-radius: var(--radius-md);
+}
+
+.uf-submit-btn {
+  width: 100%; padding: 11px;
+  background: var(--clr-primary); color: #fff;
+  border: none; border-radius: var(--radius-md);
+  font-size: 14px; font-weight: 600;
+  font-family: var(--font-body); cursor: pointer;
+  transition: var(--transition); letter-spacing: .2px;
+}
+.uf-submit-btn:hover {
+  background: var(--clr-primary-dark);
+  box-shadow: 0 4px 14px rgba(91,79,207,.35);
+  transform: translateY(-1px);
+}
+.uf-submit-btn:disabled {
+  opacity: .5; cursor: not-allowed;
+  transform: none; box-shadow: none;
+}
+
+/* ══════════════════════════════════════════════════════
+   PRENOTAZIONI ATTIVE STRIP
+   ══════════════════════════════════════════════════════ */
+.uf-bookings-strip {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-xl);
+  padding: 20px 24px;
+  box-shadow: var(--shadow-md);
+}
+.uf-strip-header {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 16px;
+}
+.uf-strip-title { font-size:13px; font-weight:700; color:var(--clr-text-1); margin:0 }
+.uf-count-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 24px; height: 24px; padding: 0 8px;
+  background: var(--clr-primary-light); color: var(--clr-primary);
+  font-size: 12px; font-weight: 700; font-family: var(--font-mono);
+  border-radius: 20px;
+}
+.uf-bookings-list { display:flex; flex-wrap:wrap; gap:10px }
+.uf-booking-item {
+  background: var(--clr-surface-2);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  transition: var(--transition);
+  min-width: 260px; flex: 1;
+}
+.uf-booking-item:hover { border-color:#c4b5fd; background:var(--clr-accent-soft) }
+.uf-booking-top {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 8px; flex-wrap: wrap;
+}
+.uf-booking-dates {
+  display: flex; align-items: center; gap: 6px;
+  flex-wrap: wrap; font-size: 12px; color: var(--clr-text-2);
+}
+.uf-arrow { color: var(--clr-text-3) }
+.uf-dur {
+  margin-left: auto; font-family: var(--font-mono); font-size: 11px;
+  color: var(--clr-text-3); background: var(--clr-surface-3);
+  padding: 2px 8px; border-radius: var(--radius-sm);
+}
+
+/* Empty state */
+.uf-empty {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 6px;
+  padding: 24px; color: var(--clr-text-3); font-size: 13px;
+}
+.uf-empty span { font-size: 26px }
+.uf-empty p { margin: 0 }
+
+/* Status pills */
+.uf-asset-pill {
+  display: inline-flex; align-items: center;
+  background: var(--clr-accent-soft); color: var(--clr-primary);
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  padding: 3px 10px; border-radius: var(--radius-sm);
+  border: 1px solid rgba(91,79,207,.15);
+}
+.uf-status-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; letter-spacing: .3px; white-space: nowrap;
+}
+.uf-status-pill::before { content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0 }
+.uf-status--avail  { background:var(--clr-success-bg); color:var(--clr-success) }
+.uf-status--avail::before  { background:var(--clr-success) }
+.uf-status--occ    { background:var(--clr-danger-bg);  color:var(--clr-danger) }
+.uf-status--occ::before    { background:var(--clr-danger) }
+.uf-status--now    { background:var(--clr-success-bg); color:var(--clr-success) }
+.uf-status--now::before    { background:var(--clr-success) }
+.uf-status--future { background:var(--clr-primary-light); color:var(--clr-primary) }
+.uf-status--future::before { background:var(--clr-primary) }
+
+/* ── Responsive ─────────────────────────────────────── */
+@media (max-width:1200px) {
+  .uf-side-panel { width:460px }
+}
+@media (max-width:1000px) {
+  .uf-side-panel { width:100% }
+}
+@media (max-width:768px) {
+  .uf-map-wrap { height:480px }
+  .uf-canvas-zone { height:100% }
+  .uf-title-row { flex-direction:column; align-items:flex-start }
+}
+@media (max-width:480px) {
+  .uf-page { padding:16px 16px 32px }
+  .header-breadcrumb { display:none }
+  .uf-map-wrap { height:360px }
+}
