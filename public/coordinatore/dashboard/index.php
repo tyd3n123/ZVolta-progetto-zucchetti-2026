@@ -128,128 +128,181 @@ $r = $stmt->get_result(); while ($row = $r->fetch_assoc()) $employees[] = $row; 
     <a href="?action=signout" class="signout-btn">Esci</a>
 </header>
 
-<!-- ── Welcome ───────────────────────────────────────── -->
-<div class="welcome-section">
-    <h2>Benvenuto, <?= htmlspecialchars($userInfo['nome']) ?></h2>
-    <span class="role-badge"><?= htmlspecialchars($userInfo['ruolo']) ?></span>
-</div>
+<div class="co-page">
 
-<!-- ── Analytics ─────────────────────────────────────── -->
-<div class="analytics-container">
-    <div class="analytics-card">
-        <div class="analytics-icon">📅</div>
-        <div class="analytics-content">
-            <h3>Le mie prenotazioni</h3>
-            <p class="analytics-number"><?= $analytics['mie_prenotazioni'] ?></p>
+    <!-- ── Welcome ───────────────────────────────────────── -->
+    <div class="co-welcome">
+        <div class="co-welcome-left">
+            <h2>Benvenuto, <?= htmlspecialchars($userInfo['nome']) ?></h2>
+            <p class="co-welcome-sub">Gestisci le tue prenotazioni e monitora il tuo team</p>
         </div>
-    </div>
-    <div class="analytics-card">
-        <div class="analytics-icon">👥</div>
-        <div class="analytics-content">
-            <h3>Prenotazioni team</h3>
-            <p class="analytics-number"><?= $analytics['team_prenotazioni'] ?></p>
-        </div>
-    </div>
-    <div class="analytics-card">
-        <div class="analytics-icon">👷</div>
-        <div class="analytics-content">
-            <h3>Dipendenti</h3>
-            <p class="analytics-number"><?= $analytics['dipendenti'] ?></p>
-        </div>
-    </div>
-</div>
-
-<!-- ── Main Layout ────────────────────────────────────── -->
-<div class="dashboard-container">
-
-    <!-- Card prenota -->
-    <div class="booking-card" onclick="location.href='./asset-disponibili.php'">
-        <div class="card-content">
-            <h3>Prenotazioni</h3>
-            <p>Prenota sale riunioni, scrivanie o parcheggi</p>
-            <button class="book-btn">Prenota ora</button>
-        </div>
+        <span class="co-role-badge"><?= htmlspecialchars($userInfo['ruolo']) ?></span>
     </div>
 
-    <!-- Colonna destra -->
-    <div class="bookings-section">
-        <div class="bookings-row">
-
-            <!-- Le tue prenotazioni -->
-            <div class="bookings-column">
-                <h2>Le tue prenotazioni</h2>
-                <div class="booking-list">
-                    <?php if (empty($userBookings)): ?>
-                        <p>Nessuna prenotazione attiva</p>
-                    <?php else: ?>
-                        <?php foreach ($userBookings as $b): ?>
-                            <div class="booking-item">
-                                <h4><?= htmlspecialchars($b['codice_asset']) ?></h4>
-                                <p><strong>Inizio:</strong> <?= date('d/m/Y H:i', strtotime($b['data_inizio'])) ?></p>
-                                <p><strong>Fine:</strong>   <?= date('d/m/Y H:i', strtotime($b['data_fine'])) ?></p>
-                            </div>
-                        <?php endforeach; ?>
-                        <?php if ($totalUserBookings > 3): ?>
-                            <p class="more-bookings">+<?= $totalUserBookings - 3 ?> altre prenotazioni</p>
-                        <?php endif; ?>
-                    <?php endif; ?>
-                </div>
-                <button class="show-more-btn" onclick="openUserBookingsModal()">Mostra tutte →</button>
+    <!-- ── Stats ─────────────────────────────────────────── -->
+    <div class="co-stats">
+        <div class="co-stat-card">
+            <div class="co-stat-icon">📅</div>
+            <div>
+                <div class="co-stat-label">Mie prenotazioni attive</div>
+                <div class="co-stat-num"><?= $analytics['mie_prenotazioni'] ?></div>
             </div>
-
-            <!-- Prenotazioni del team -->
-            <div class="bookings-column">
-                <h2>Prenotazioni del team</h2>
-                <div class="booking-list">
-                    <?php if (empty($teamBookings)): ?>
-                        <p>Nessuna prenotazione del team</p>
-                    <?php else: ?>
-                        <?php foreach ($teamBookings as $b): ?>
-                            <div class="booking-item">
-                                <h4><?= htmlspecialchars($b['codice_asset']) ?></h4>
-                                <p><strong>Dipendente:</strong> <?= htmlspecialchars($b['nome'] . ' ' . $b['cognome']) ?></p>
-                                <p><strong>Inizio:</strong> <?= date('d/m/Y H:i', strtotime($b['data_inizio'])) ?></p>
-                                <p><strong>Fine:</strong>   <?= date('d/m/Y H:i', strtotime($b['data_fine'])) ?></p>
-                            </div>
-                        <?php endforeach; ?>
-                        <?php if ($totalTeamBookings > 4): ?>
-                            <p class="more-bookings">+<?= $totalTeamBookings - 4 ?> altre prenotazioni</p>
-                        <?php endif; ?>
-                    <?php endif; ?>
-                </div>
-                <button class="show-more-btn" onclick="openTeamBookingsModal()">Mostra tutte →</button>
+        </div>
+        <div class="co-stat-card">
+            <div class="co-stat-icon">👥</div>
+            <div>
+                <div class="co-stat-label">Prenotazioni del team</div>
+                <div class="co-stat-num"><?= $analytics['team_prenotazioni'] ?></div>
             </div>
+        </div>
+        <div class="co-stat-card">
+            <div class="co-stat-icon">👷</div>
+            <div>
+                <div class="co-stat-label">Dipendenti gestiti</div>
+                <div class="co-stat-num"><?= $analytics['dipendenti'] ?></div>
+            </div>
+        </div>
+    </div>
 
-            <!-- I miei dipendenti -->
-            <div class="bookings-column small">
-                <h2>I miei dipendenti</h2>
-                <div class="employees-list">
-                    <?php if (empty($employees)): ?>
-                        <p class="no-employees">Nessun dipendente assegnato</p>
-                    <?php else: ?>
+    <!-- ── Prenota banner ─────────────────────────────────── -->
+    <a href="./asset-disponibili.php" class="co-avail-banner">
+        <span class="co-avail-icon">➕</span>
+        <div>
+            <div class="co-avail-title">Nuova prenotazione</div>
+            <div class="co-avail-sub">Prenota sale riunioni, scrivanie o parcheggi</div>
+        </div>
+        <span class="co-avail-arrow">→</span>
+    </a>
+
+    <!-- ── Tre pannelli ───────────────────────────────────── -->
+    <div class="co-panels-grid">
+
+        <!-- Le tue prenotazioni -->
+        <div class="co-panel">
+            <div class="co-panel-head">
+                <span class="co-panel-title">Le tue prenotazioni</span>
+                <span class="co-panel-badge"><?= $totalUserBookings ?></span>
+            </div>
+            <div class="co-panel-body">
+                <?php if (empty($userBookings)): ?>
+                    <div class="co-empty"><span class="co-empty-icon">📅</span>Nessuna prenotazione attiva</div>
+                <?php else: ?>
+                    <div class="co-booking-list">
+                        <?php foreach ($userBookings as $b):
+                            $dtS   = new DateTime($b['data_inizio']);
+                            $dtE   = new DateTime($b['data_fine']);
+                            $now   = new DateTime();
+                            $isNow = $now >= $dtS && $now <= $dtE;
+                            $diff  = $dtS->diff($dtE);
+                            $dur   = ($diff->h > 0 ? $diff->h . 'h ' : '') . $diff->i . 'm';
+                        ?>
+                        <div class="co-booking-item">
+                            <div class="co-booking-meta">
+                                <div class="co-booking-asset"><?= htmlspecialchars($b['codice_asset']) ?></div>
+                                <div class="co-booking-dates"><?= $dtS->format('d/m/Y') ?> · <?= $dtS->format('H:i') ?>–<?= $dtE->format('H:i') ?></div>
+                            </div>
+                            <div class="co-booking-right">
+                                <span class="co-status-pill co-status--<?= $isNow ? 'now' : 'future' ?>">
+                                    <?= $isNow ? 'In corso' : 'Programmata' ?>
+                                </span>
+                                <span class="co-dur"><?= $dur ?></span>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if ($totalUserBookings > 3): ?>
+                    <div class="co-more-note">+<?= $totalUserBookings - 3 ?> altra/e prenotazion<?= ($totalUserBookings - 3) !== 1 ? 'i' : 'e' ?> non mostrata/e</div>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+            <div class="co-panel-foot">
+                <button class="co-show-more-btn" onclick="openUserBookingsModal()">Vedi tutte le prenotazioni →</button>
+            </div>
+        </div>
+
+        <!-- Prenotazioni del team -->
+        <div class="co-panel">
+            <div class="co-panel-head">
+                <span class="co-panel-title">Prenotazioni del team</span>
+                <span class="co-panel-badge"><?= $totalTeamBookings ?></span>
+            </div>
+            <div class="co-panel-body">
+                <?php if (empty($teamBookings)): ?>
+                    <div class="co-empty"><span class="co-empty-icon">👥</span>Nessuna prenotazione del team</div>
+                <?php else: ?>
+                    <div class="co-booking-list">
+                        <?php foreach ($teamBookings as $b):
+                            $dtS   = new DateTime($b['data_inizio']);
+                            $dtE   = new DateTime($b['data_fine']);
+                            $now   = new DateTime();
+                            $isNow = $now >= $dtS && $now <= $dtE;
+                            $diff  = $dtS->diff($dtE);
+                            $dur   = ($diff->h > 0 ? $diff->h . 'h ' : '') . $diff->i . 'm';
+                        ?>
+                        <div class="co-booking-item">
+                            <div class="co-booking-meta">
+                                <div class="co-booking-asset"><?= htmlspecialchars($b['codice_asset']) ?></div>
+                                <div class="co-booking-user"><?= htmlspecialchars($b['nome'] . ' ' . $b['cognome']) ?></div>
+                                <div class="co-booking-dates"><?= $dtS->format('d/m/Y') ?> · <?= $dtS->format('H:i') ?>–<?= $dtE->format('H:i') ?></div>
+                            </div>
+                            <div class="co-booking-right">
+                                <span class="co-status-pill co-status--<?= $isNow ? 'now' : 'future' ?>">
+                                    <?= $isNow ? 'In corso' : 'Programmata' ?>
+                                </span>
+                                <span class="co-dur"><?= $dur ?></span>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if ($totalTeamBookings > 4): ?>
+                    <div class="co-more-note">+<?= $totalTeamBookings - 4 ?> altra/e prenotazion<?= ($totalTeamBookings - 4) !== 1 ? 'i' : 'e' ?> non mostrata/e</div>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+            <div class="co-panel-foot">
+                <button class="co-show-more-btn" onclick="openTeamBookingsModal()">Vedi tutte le prenotazioni →</button>
+            </div>
+        </div>
+
+        <!-- I miei dipendenti -->
+        <div class="co-panel">
+            <div class="co-panel-head">
+                <span class="co-panel-title">I miei dipendenti</span>
+                <?php if (!empty($employees)): ?>
+                <span class="co-panel-badge"><?= count($employees) ?></span>
+                <?php endif; ?>
+            </div>
+            <div class="co-panel-body">
+                <?php if (empty($employees)): ?>
+                    <div class="co-empty"><span class="co-empty-icon">👷</span>Nessun dipendente assegnato</div>
+                <?php else: ?>
+                    <div class="co-employee-list">
                         <?php foreach ($employees as $emp): ?>
-                            <div class="employee-item">
-                                <div class="employee-info">
-                                    <h4><?= htmlspecialchars($emp['nome'] . ' ' . $emp['cognome']) ?></h4>
+                        <div class="co-employee-item">
+                            <div class="co-employee-info">
+                                <div class="co-employee-name"><?= htmlspecialchars($emp['nome'] . ' ' . $emp['cognome']) ?></div>
+                                <div class="co-employee-sub">
                                     <?php if ($emp['prenotazioni_attive'] > 0): ?>
-                                        <p class="employee-role"><?= (int)$emp['prenotazioni_attive'] ?> prenotazion<?= $emp['prenotazioni_attive'] > 1 ? 'i' : 'e' ?> attiv<?= $emp['prenotazioni_attive'] > 1 ? 'e' : 'a' ?></p>
+                                        <?= (int)$emp['prenotazioni_attive'] ?> prenotazion<?= $emp['prenotazioni_attive'] > 1 ? 'i' : 'e' ?> attiv<?= $emp['prenotazioni_attive'] > 1 ? 'e' : 'a' ?>
                                     <?php else: ?>
-                                        <p class="employee-role">Nessuna prenotazione attiva</p>
+                                        Nessuna prenotazione attiva
                                     <?php endif; ?>
                                 </div>
-                                <button class="employee-btn"
-                                        onclick="location.href='../utenti/index.php?id=<?= $emp['id_utente'] ?>'">
-                                    Gestisci
-                                </button>
                             </div>
+                            <button class="co-employee-btn"
+                                    onclick="location.href='../utenti/index.php?id=<?= $emp['id_utente'] ?>'">
+                                Gestisci
+                            </button>
+                        </div>
                         <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
+                    </div>
+                <?php endif; ?>
             </div>
-
         </div>
-    </div>
-</div>
+
+    </div><!-- /.co-panels-grid -->
+
+</div><!-- /.co-page -->
 
 <!-- ── Modals ─────────────────────────────────────────── -->
 <div id="user-bookings-modal" class="modal-overlay" style="display:none;">

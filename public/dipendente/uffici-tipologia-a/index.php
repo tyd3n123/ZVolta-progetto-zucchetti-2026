@@ -20,6 +20,16 @@ $stmt->bind_param("i", $id_utente); $stmt->execute();
 $userInfo = $stmt->get_result()->fetch_assoc() ?? ['nome'=>'','cognome'=>'','ruolo'=>''];
 $stmt->close();
 
+// ── Blocco: già prenotato oggi ────────────────────────
+$stmt = $conn->prepare("SELECT COUNT(*) AS c FROM prenotazioni WHERE id_utente = ? AND DATE(data_inizio) = CURDATE()");
+$stmt->bind_param("i", $id_utente); $stmt->execute();
+$hasBookingToday = (int)$stmt->get_result()->fetch_assoc()['c'] > 0;
+$stmt->close();
+if ($hasBookingToday) {
+    header("Location: ../dashboard/index.php?errore=gia_prenotato");
+    exit();
+}
+
 // ── POST handlers ──────────────────────────────────────
 $feedback = null;
 
