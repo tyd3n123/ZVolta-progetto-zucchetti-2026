@@ -45,14 +45,6 @@ body {
   margin-left: -200px;
 }
 
-.s4 button {
-  background: white;
-  color: #1a1a2e;
-  border: 1px solid #e5e7eb;
-  padding: 12px 20px;
-  border-radius: 8px;
-  font-weight: 500;
-}
 .dropdown-content {
   visibility: hidden;
   opacity: 0;
@@ -69,11 +61,6 @@ body {
   box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
   padding: 12px 16px;
   transition: opacity 1.5s ease, visibility 0.1s;
-}
-
-.s4:hover .dropdown-content {
-  visibility: visible;
-  opacity: 1;
 }
 
 .link {

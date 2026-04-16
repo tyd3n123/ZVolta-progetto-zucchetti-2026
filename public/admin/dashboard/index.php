@@ -117,14 +117,14 @@ if ($result) while ($row = $result->fetch_assoc()) $employees[] = $row;
 <!-- ── Analytics ─────────────────────────────────────── -->
 <div class="analytics-container">
     <div class="analytics-card">
-        <div class="analytics-icon">👥</div>
+        <div class="analytics-icon">👷‍♂️👷‍♂️</div>
         <div class="analytics-content">
             <h3>Dipendenti</h3>
             <p class="analytics-number"><?= $analytics['dipendenti'] ?></p>
         </div>
     </div>
     <div class="analytics-card">
-        <div class="analytics-icon">👔</div>
+        <div class="analytics-icon">🧑‍💻</div>
         <div class="analytics-content">
             <h3>Coordinatori</h3>
             <p class="analytics-number"><?= $analytics['coordinatori'] ?></p>

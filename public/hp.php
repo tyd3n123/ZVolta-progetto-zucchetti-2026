@@ -88,14 +88,6 @@
       transition: opacity 0.3s ease, visibility 0.1s;
     }
 
-    .s1:hover .dropdown-content,
-    .s2:hover .dropdown-content,
-    .s3:hover .dropdown-content,
-    .s4:hover .dropdown-content {
-      visibility: visible;
-      opacity: 1;
-    }
-
     .login .btn {
       padding: 10px 20px;
       border-radius: 8px;
@@ -190,19 +182,6 @@
 
       <div class="logo-text">
         <h2>NorthStar</h2>
-      </div>
-
-      <div class="s4">
-        <button>Chi siamo</button>
-        <div class="dropdown-content">
-          <p>L'azienda Z-Volta: NorthStar è una società leader nel settore della gestione di parcheggi, uffici e sale riunioni, 
-          offrendo soluzioni innovative e personalizzate per soddisfare le esigenze di ogni cliente. <br>
-         Componenti del team: <br>
-         Admin: Carta Mattia <br>
-         Coordinatori: Gaba Ares <br>
-         Dipendenti: Pop Darius, Herrera Prado Francesco, Gucci Filippo, Cesarini Michel, Vitali Miguel
-        </p>
-        </div>
       </div>
 
       <div class="login">

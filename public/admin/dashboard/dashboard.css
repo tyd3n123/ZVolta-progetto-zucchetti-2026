@@ -96,8 +96,11 @@ body {
 .header h1 {
   font-size: 20px;
   font-weight: 700;
-  color: var(--clr-primary);
   letter-spacing: -.4px;
+  background: linear-gradient(135deg, #ffad50 0%, #c0a9fd 99.9%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .signout-btn {
@@ -171,13 +174,13 @@ body {
   display: flex;
   align-items: center;
   gap: 16px;
-  background: rgba(255,255,255,.08);
+  background: rgba(123, 122, 122, 0.421);
   border: 1px solid rgba(255,255,255,.12);
   border-radius: var(--radius-lg);
   padding: 18px 24px;
   min-width: 200px;
   flex: 1;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(18px);
   transition: var(--transition);
 }
 
@@ -317,8 +320,8 @@ body {
   justify-content: center;
   gap: 6px;
   flex-shrink: 0;
-  background: var(--clr-primary);
-  color: #fff;
+  background: linear-gradient(135deg, #ffad50 0%, #c0a9fd 99.9%);
+  color:white;
   border: none;
   padding: 8px 16px;
   border-radius: var(--radius-md);
@@ -359,7 +362,6 @@ body {
 
 .bookings-column.small {
   flex: unset;
-
   scrollbar-width: thin;
   scrollbar-color: #888;
 

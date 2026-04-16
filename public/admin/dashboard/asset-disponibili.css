@@ -3,8 +3,13 @@
    ═══════════════════════════════════════════════════════ */
 
 /* ── Page Layout ─────────────────────────────────────── */
+
 .asset-disponibili-page {
-  background: var(--clr-bg-page);
+  background-image: url('../../assets/BackGround1.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   min-height: calc(100vh - 64px);
   padding: 40px 20px 48px;
   display: flex;
@@ -19,13 +24,17 @@
   margin: 0 auto;
 }
 
+header a {
+  text-decoration: none;
+}
+
 .page-title {
   font-size: 28px;
   font-weight: 700;
   color: var(--clr-text-1);
   margin: 0 0 8px;
   letter-spacing: -0.5px;
-  background: linear-gradient(135deg, var(--clr-primary) 0%, var(--clr-accent) 100%);
+  background: white;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -33,7 +42,7 @@
 
 .page-subtitle {
   font-size: 15px;
-  color: var(--clr-text-2);
+  color: white;
   margin: 0;
   line-height: 1.5;
 }

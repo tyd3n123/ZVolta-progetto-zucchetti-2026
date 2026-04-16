@@ -32,7 +32,7 @@ $stmt->close();
     <div class="header-left">
         <h1>Northstar</h1>
         <nav class="header-breadcrumb">
-            <a href="../dashboard/index.php">Dashboard</a>
+            <a href="../dashboard/index.php" style="color: black;">Dashboard</a>
             <span class="bc-sep">/</span>
             <span class="bc-current">Asset Disponibili</span>
         </nav>
