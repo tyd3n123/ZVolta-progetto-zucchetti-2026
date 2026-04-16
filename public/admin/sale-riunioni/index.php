@@ -30,10 +30,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'book'
     $data_inizio = $_POST['data_inizio'] ?? '';
     $data_fine   = $_POST['data_fine']   ?? '';
 
+    $tsInizio = strtotime($data_inizio);
+    $tsFine   = strtotime($data_fine);
+    $hInizio  = (int)date('H', $tsInizio) * 60 + (int)date('i', $tsInizio);
+    $hFine    = (int)date('H', $tsFine)   * 60 + (int)date('i', $tsFine);
+
     if (!$id_asset || !$data_inizio || !$data_fine) {
         $feedback = ['type' => 'error', 'msg' => 'Compila tutti i campi prima di procedere.'];
-    } elseif (strtotime($data_fine) <= strtotime($data_inizio)) {
+    } elseif ($tsInizio < time()) {
+        $feedback = ['type' => 'error', 'msg' => 'Non puoi prenotare nel passato.'];
+    } elseif ($tsFine <= $tsInizio) {
         $feedback = ['type' => 'error', 'msg' => 'La data di fine deve essere successiva alla data di inizio.'];
+    } elseif (date('Y-m-d', $tsInizio) !== date('Y-m-d', $tsFine)) {
+        $feedback = ['type' => 'error', 'msg' => 'La prenotazione deve essere nella stessa giornata (09:00–19:00).'];
+    } elseif ($hInizio < 9 * 60) {
+        $feedback = ['type' => 'error', 'msg' => 'L\'orario di inizio non può essere prima delle 09:00.'];
+    } elseif ($hInizio >= 19 * 60) {
+        $feedback = ['type' => 'error', 'msg' => 'L\'orario di inizio non può essere dalle 19:00 in poi.'];
+    } elseif ($hFine > 19 * 60) {
+        $feedback = ['type' => 'error', 'msg' => 'L\'orario di fine non può superare le 19:00.'];
     } else {
         $stmt = $conn->prepare(
             "SELECT COUNT(*) AS c FROM prenotazioni
@@ -78,7 +93,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'book'
 // ── Fetch sale riunioni (id_tipologia = 3) ───────────
 $roomSpots = [];
 $result = $conn->query(
-    "SELECT a.id_asset, a.codice_asset, a.stato, a.piano,
+    "SELECT a.id_asset, a.codice_asset, a.piano,
+            CASE WHEN EXISTS (
+                SELECT 1 FROM prenotazioni pr
+                WHERE pr.id_asset = a.id_asset
+                  AND NOW() BETWEEN pr.data_inizio AND pr.data_fine
+            ) THEN 'Occupato' ELSE 'Disponibile' END AS stato,
             COALESCE(s.capacita, '-')        AS capacita,
             COALESCE(s.attrezzatura, '-')    AS attrezzatura,
             COALESCE(s.orario_apertura, '')  AS orario_apertura,
@@ -270,23 +290,21 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
                         <input type="hidden" name="action"   value="book">
                         <input type="hidden" name="id_asset" id="panel-asset-id" value="">
 
-                        <div class="sr-fields-row">
-                            <div class="sr-field">
-                                <label for="data-inizio">Data Inizio</label>
-                                <input type="datetime-local" id="data-inizio" name="data_inizio"
-                                       value="<?= htmlspecialchars($_POST['data_inizio'] ?? '') ?>"
-                                       required onchange="updateDuration()">
-                            </div>
-                            <div class="sr-field">
-                                <label for="data-fine">Data Fine</label>
-                                <input type="datetime-local" id="data-fine" name="data_fine"
-                                       value="<?= htmlspecialchars($_POST['data_fine'] ?? '') ?>"
-                                       required onchange="updateDuration()">
-                            </div>
+                        <div class="sr-field" style="margin-bottom:10px">
+                            <label class="sr-field-lbl">Data Inizio</label>
+                            <input class="sr-field-input" type="datetime-local" id="data-inizio" name="data_inizio"
+                                   value="<?= htmlspecialchars($_POST['data_inizio'] ?? '') ?>"
+                                   required onchange="updateDuration()">
+                        </div>
+                        <div class="sr-field" style="margin-bottom:10px">
+                            <label class="sr-field-lbl">Data Fine</label>
+                            <input class="sr-field-input" type="datetime-local" id="data-fine" name="data_fine"
+                                   value="<?= htmlspecialchars($_POST['data_fine'] ?? '') ?>"
+                                   required onchange="updateDuration()">
                         </div>
 
                         <div id="sr-duration-preview" class="sr-duration-preview" style="display:none;">
-                            <span class="sr-duration-icon"></span>
+                            <span class="sr-duration-icon">⏱️</span>
                             <span id="sr-duration-text"></span>
                         </div>
 
@@ -747,7 +765,7 @@ function openRoomPanel(id) {
     if (!room) return;
 
     selectedId = id;
-    draw(); // ridisegna con selezione
+    draw();
 
     const isOcc = room.status.toLowerCase() === 'occupato';
 
@@ -758,7 +776,6 @@ function openRoomPanel(id) {
          </span>`;
 
     const pianoLabel = room.piano ? `Piano ${room.piano}` : '–';
-
     document.getElementById('panel-info-grid').innerHTML = `
         <div class="sr-info-tile">
             <span class="sr-info-tile-label">Piano</span>
@@ -770,29 +787,27 @@ function openRoomPanel(id) {
         </div>
         <div class="sr-info-tile">
             <span class="sr-info-tile-label">Attrezzatura</span>
-            <span class="sr-info-tile-val" style="font-size:12px">${room.attrezzatura}</span>
+            <span class="sr-info-tile-val" style="font-size:11px">${room.attrezzatura}</span>
         </div>
         <div class="sr-info-tile">
             <span class="sr-info-tile-label">Orario</span>
-            <span class="sr-info-tile-val" style="font-size:12px">${room.disponibilita}</span>
+            <span class="sr-info-tile-val" style="font-size:11px">${room.disponibilita}</span>
         </div>`;
 
-    // Slot occupati
-    const slots   = occupiedSlots[id] || [];
-    const slotsEl = document.getElementById('panel-slots');
-    if (slots.length > 0) {
-        slotsEl.innerHTML = slots.map(s => `
-            <div class="sr-slot-item">
-                <span class="sr-slot-dot"></span>
-                <span>${formatDate(s.inizio)}</span>
-                <span class="sr-slot-arrow">→</span>
-                <span>${formatDate(s.fine)}</span>
-            </div>`).join('');
-    } else {
-        slotsEl.innerHTML = '<div class="sr-slots-empty-msg">✓ Nessun periodo occupato — sala libera</div>';
-    }
+    document.getElementById('panel-timeline').innerHTML   = renderTimeline(id);
+    document.getElementById('panel-free-slots').innerHTML = renderFreeSlots(id);
 
     document.getElementById('panel-asset-id').value = id;
+    document.getElementById('data-inizio').value    = '';
+    document.getElementById('data-fine').value      = '';
+    document.getElementById('sr-duration-preview').style.display = 'none';
+    document.getElementById('sr-form-error').style.display       = 'none';
+    document.getElementById('submit-btn').disabled = false;
+
+    const minVal = toLocalISO(new Date());
+    document.getElementById('data-inizio').min = minVal;
+    document.getElementById('data-fine').min   = minVal;
+
     document.getElementById('sr-backdrop').classList.add('visible');
     document.getElementById('side-panel').classList.add('open');
 }
@@ -807,46 +822,221 @@ function closeRoomPanel() {
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeRoomPanel(); });
 
 // ════════════════════════════════════════════════════════
-// FORM UTILS
+// TIMELINE OGGI (09:00–19:00)
 // ════════════════════════════════════════════════════════
+function renderTimeline(roomId) {
+    const now      = new Date();
+    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(),  9, 0, 0);
+    const dayEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 19, 0, 0);
+    const dayMs    = 10 * 3600000;
+
+    const rawSlots = (occupiedSlots[roomId] || [])
+        .map(s => ({ start: new Date(s.inizio), end: new Date(s.fine) }))
+        .filter(s => s.end > dayStart && s.start < dayEnd)
+        .sort((a, b) => a.start - b.start);
+
+    const segs = [];
+    let ptr = dayStart.getTime();
+    for (const occ of rawSlots) {
+        const oS = Math.max(occ.start.getTime(), dayStart.getTime());
+        const oE = Math.min(occ.end.getTime(),   dayEnd.getTime());
+        if (oS > ptr) segs.push({ type: 'free', start: ptr, end: oS });
+        segs.push({ type: 'occ', start: oS, end: oE });
+        ptr = oE;
+    }
+    if (ptr < dayEnd.getTime()) segs.push({ type: 'free', start: ptr, end: dayEnd.getTime() });
+
+    const bars = segs.map(s => {
+        const pct = ((s.end - s.start) / dayMs * 100).toFixed(2);
+        const bg  = s.type === 'occ' ? '#ef444466' : '#22c55e33';
+        const brd = s.type === 'occ' ? '#ef4444'   : '#22c55e';
+        const tip = (s.type === 'occ' ? 'Occupata' : 'Libera') + ': ' + fmtTime(new Date(s.start)) + ' – ' + fmtTime(new Date(s.end));
+        return `<div style="width:${pct}%;height:100%;background:${bg};border-right:1px solid ${brd}" title="${tip}"></div>`;
+    }).join('');
+
+    const nowPct = ((now - dayStart) / dayMs * 100).toFixed(2);
+    const nowMark = nowPct >= 0 && nowPct <= 100
+        ? `<div style="position:absolute;top:-3px;left:${nowPct}%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none;z-index:2">
+               <div style="width:2px;height:26px;background:#f59e0b;border-radius:1px"></div>
+               <span style="font-size:9px;font-weight:700;color:#f59e0b;margin-top:2px">ora</span></div>` : '';
+
+    const labels = [9, 11, 13, 15, 17, 19].map(h => {
+        const pct = ((h - 9) / 10 * 100).toFixed(1);
+        return `<span style="position:absolute;left:${pct}%;transform:translateX(-50%);font-size:9px;color:var(--clr-text-3);font-weight:600">${String(h).padStart(2,'0')}:00</span>`;
+    }).join('');
+
+    const n = rawSlots.length;
+    const summary = n === 0
+        ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--clr-success-bg);color:var(--clr-success)">Libera tutto il giorno</span>`
+        : `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--clr-danger-bg);color:var(--clr-danger)">${n} prenotazion${n > 1 ? 'i' : 'e'} oggi</span>`;
+
+    return `
+        <div style="position:relative;padding-bottom:20px">
+            <div style="display:flex;height:20px;border-radius:4px;overflow:hidden;border:1px solid var(--clr-border)">${bars}</div>
+            ${nowMark}
+            <div style="position:absolute;bottom:0;left:0;width:100%;height:16px">${labels}</div>
+        </div>
+        <div style="margin-top:8px">${summary}</div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// SLOT LIBERI SUGGERITI (09:00–19:00)
+// ════════════════════════════════════════════════════════
+function getFreeWindows(roomId) {
+    const now = new Date();
+
+    const cursor = new Date(now);
+    cursor.setMinutes(Math.ceil(cursor.getMinutes() / 15) * 15, 0, 0);
+    if (cursor <= now) cursor.setMinutes(cursor.getMinutes() + 15);
+
+    const occupied = (occupiedSlots[roomId] || [])
+        .map(s => ({ start: new Date(s.inizio), end: new Date(s.fine) }))
+        .sort((a, b) => a.start - b.start);
+
+    const windows = [];
+
+    for (let d = 0; d < 7 && windows.length < 4; d++) {
+        const base     = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d);
+        const winStart = new Date(base.getFullYear(), base.getMonth(), base.getDate(),  9, 0, 0);
+        const winEnd   = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 19, 0, 0);
+
+        const from = d === 0
+            ? new Date(Math.max(cursor.getTime(), winStart.getTime()))
+            : winStart;
+
+        if (from >= winEnd) continue;
+
+        const dayOcc = occupied.filter(s => s.end > from && s.start < winEnd);
+        let ptr = new Date(from);
+
+        for (const occ of dayOcc) {
+            if (occ.start > ptr) {
+                const slotEnd = new Date(Math.min(occ.start.getTime(), winEnd.getTime()));
+                windows.push({ start: new Date(ptr), end: slotEnd });
+                if (windows.length >= 4) break;
+            }
+            if (occ.end > ptr) ptr = new Date(Math.min(occ.end.getTime(), winEnd.getTime()));
+        }
+
+        if (windows.length < 4 && ptr < winEnd) {
+            windows.push({ start: new Date(ptr), end: winEnd });
+        }
+    }
+
+    return windows.slice(0, 4);
+}
+
+function renderFreeSlots(roomId) {
+    const windows = getFreeWindows(roomId);
+    if (!windows.length) return `<div style="padding:10px 12px;background:var(--clr-surface-2);border:1px solid var(--clr-border);border-radius:var(--radius-md);font-size:12px;color:var(--clr-text-3)">🔒 Nessun periodo libero nei prossimi 7 giorni</div>`;
+
+    return windows.map(fw => {
+        const durMs  = fw.end - fw.start;
+        const durH   = Math.floor(durMs / 3600000);
+        const durM   = Math.floor((durMs % 3600000) / 60000);
+        const durLbl = durH > 0 ? `${durH}h${durM > 0 ? ' ' + durM + 'm' : ''}` : `${durM}m`;
+
+        return `<div onclick="prefillSlot('${toLocalISO(fw.start)}','${toLocalISO(fw.end)}')"
+                     onmouseover="this.style.background='#bbf7d0'" onmouseout="this.style.background='var(--clr-success-bg)'"
+                     style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;
+                            background:var(--clr-success-bg);border:1px solid #86efac;border-left:3px solid var(--clr-success);
+                            border-radius:var(--radius-md);cursor:pointer;margin-bottom:6px;transition:background .15s">
+                    <div>
+                        <div style="font-size:10px;font-weight:700;color:var(--clr-success);text-transform:uppercase;letter-spacing:.5px">${fmtDay(fw.start)}</div>
+                        <div style="font-size:12px;font-weight:600;color:var(--clr-text-1)">${fmtTime(fw.start)} → ${fmtTime(fw.end)}</div>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font-size:11px;font-weight:700;color:var(--clr-text-2)">${durLbl}</div>
+                        <div style="font-size:10px;font-weight:700;color:var(--clr-success);text-transform:uppercase;letter-spacing:.4px">Prenota →</div>
+                    </div>
+                </div>`;
+    }).join('');
+}
+
+function prefillSlot(startISO, endISO) {
+    document.getElementById('data-inizio').value = startISO;
+    document.getElementById('data-fine').value   = endISO;
+    updateDuration();
+    document.getElementById('booking-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ════════════════════════════════════════════════════════
+// FORM — validazione 09:00-19:00 + conflitti
+// ════════════════════════════════════════════════════════
+function hasConflict(startVal, endVal, roomId) {
+    if (!startVal || !endVal || !roomId) return false;
+    const s = new Date(startVal), e = new Date(endVal);
+    return (occupiedSlots[roomId] || []).some(sl => s < new Date(sl.fine) && e > new Date(sl.inizio));
+}
+
 function updateDuration() {
-    const start   = document.getElementById('data-inizio').value;
-    const end     = document.getElementById('data-fine').value;
-    const preview = document.getElementById('sr-duration-preview');
-    const text    = document.getElementById('sr-duration-text');
-    const error   = document.getElementById('sr-form-error');
+    const startVal = document.getElementById('data-inizio').value;
+    const endVal   = document.getElementById('data-fine').value;
+    const preview  = document.getElementById('sr-duration-preview');
+    const error    = document.getElementById('sr-form-error');
+    const btn      = document.getElementById('submit-btn');
+    const roomId   = parseInt(document.getElementById('panel-asset-id').value);
 
-    if (!start || !end) { preview.style.display = 'none'; return; }
-
-    const ms   = new Date(end) - new Date(start);
-    const days = Math.floor(ms / 86400000);
-    const hrs  = Math.floor((ms % 86400000) / 3600000);
-    const mins = Math.floor((ms % 3600000)  / 60000);
-
-    if (ms <= 0) {
+    if (!startVal || !endVal) {
         preview.style.display = 'none';
-        error.style.display   = '';
-        error.textContent     = '⚠️ La data di fine deve essere successiva alla data di inizio.';
-        document.getElementById('submit-btn').disabled = true;
+        error.style.display   = 'none';
+        btn.disabled = false;
         return;
     }
 
-    error.style.display   = 'none';
-    preview.style.display = '';
-    document.getElementById('submit-btn').disabled = false;
+    const startDate = new Date(startVal);
+    const endDate   = new Date(endVal);
+    const ms        = endDate - startDate;
+    const startMins = startDate.getHours() * 60 + startDate.getMinutes();
+    const endMins   = endDate.getHours()   * 60 + endDate.getMinutes();
+    const sameDay   = startDate.toDateString() === endDate.toDateString();
 
+    if (startVal) document.getElementById('data-fine').min = startVal;
+
+    const showErr = msg => {
+        preview.style.display = 'none';
+        error.style.display   = '';
+        error.innerHTML = '⚠️ ' + msg;
+        btn.disabled = true;
+    };
+
+    if (startDate < new Date()) return showErr('Non puoi prenotare nel passato.');
+    if (ms <= 0)                return showErr('La data di fine deve essere successiva alla data di inizio.');
+    if (startMins < 9 * 60)    return showErr('L\'orario di inizio non può essere prima delle 09:00.');
+    if (startMins >= 19 * 60)  return showErr('L\'orario di inizio non può essere dalle 19:00 in poi.');
+    if (endMins > 19 * 60)     return showErr('L\'orario di fine non può superare le 19:00.');
+    if (!sameDay)               return showErr('La prenotazione deve essere nella stessa giornata (09:00–19:00).');
+    if (hasConflict(startVal, endVal, roomId))
+        return showErr('Periodo sovrapposto a una prenotazione esistente.<br><small>Scegli uno dei periodi liberi suggeriti sopra.</small>');
+
+    error.style.display = 'none';
+    btn.disabled = false;
+
+    const hrs  = Math.floor(ms / 3600000);
+    const mins = Math.floor((ms % 3600000) / 60000);
     const parts = [];
-    if (days > 0) parts.push(`${days} giorn${days > 1 ? 'i' : 'o'}`);
     if (hrs  > 0) parts.push(`${hrs} or${hrs > 1 ? 'e' : 'a'}`);
     if (mins > 0) parts.push(`${mins} minut${mins > 1 ? 'i' : 'o'}`);
-    text.textContent = 'Durata: ' + (parts.join(' ') || 'meno di un minuto');
+    preview.style.display = '';
+    preview.innerHTML = `⏱️ <strong>${parts.join(' ') || 'meno di un minuto'}</strong> — ${fmtDateTime(startDate)} → ${fmtDateTime(endDate)}`;
 }
 
-function formatDate(str) {
-    return new Date(str).toLocaleString('it-IT', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-    });
+// ════════════════════════════════════════════════════════
+// HELPERS DATA/ORA
+// ════════════════════════════════════════════════════════
+function toLocalISO(d) {
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function fmtTime(d)     { return d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); }
+function fmtDateTime(d) { return d.toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+function fmtDay(d) {
+    const t = new Date(); t.setHours(0,0,0,0);
+    const diff = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - t) / 86400000);
+    if (diff === 0) return 'Oggi';
+    if (diff === 1) return 'Domani';
+    if (diff === 2) return 'Dopodomani';
+    return d.toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: 'short' });
 }
 
 // ════════════════════════════════════════════════════════
