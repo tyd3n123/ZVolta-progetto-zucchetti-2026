@@ -30,12 +30,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'book'
     $data_inizio = $_POST['data_inizio'] ?? '';
     $data_fine   = $_POST['data_fine']   ?? '';
 
+    $tsInizio = strtotime($data_inizio);
+    $tsFine   = strtotime($data_fine);
+    $hInizio  = (int)date('H', $tsInizio) * 60 + (int)date('i', $tsInizio);
+    $hFine    = (int)date('H', $tsFine)   * 60 + (int)date('i', $tsFine);
+
     if (!$id_asset || !$data_inizio || !$data_fine) {
         $feedback = ['type' => 'error', 'msg' => 'Seleziona le date prima di procedere.'];
-    } elseif (strtotime($data_inizio) < time()) {
+    } elseif ($tsInizio < time()) {
         $feedback = ['type' => 'error', 'msg' => 'Non puoi prenotare nel passato.'];
-    } elseif (strtotime($data_fine) <= strtotime($data_inizio)) {
+    } elseif ($tsFine <= $tsInizio) {
         $feedback = ['type' => 'error', 'msg' => 'La data di fine deve essere successiva alla data di inizio.'];
+    } elseif (date('Y-m-d', $tsInizio) !== date('Y-m-d', $tsFine)) {
+        $feedback = ['type' => 'error', 'msg' => 'La prenotazione deve essere nella stessa giornata (09:00–19:00).'];
+    } elseif ($hInizio < 9 * 60) {
+        $feedback = ['type' => 'error', 'msg' => 'L\'orario di inizio non può essere prima delle 09:00.'];
+    } elseif ($hInizio >= 19 * 60) {
+        $feedback = ['type' => 'error', 'msg' => 'L\'orario di inizio non può essere dalle 19:00 in poi.'];
+    } elseif ($hFine > 19 * 60) {
+        $feedback = ['type' => 'error', 'msg' => 'L\'orario di fine non può superare le 19:00.'];
     } else {
         $stmt = $conn->prepare(
             "SELECT COUNT(*) AS c FROM prenotazioni
@@ -78,7 +91,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'book'
 // ── Fetch parcheggi ────────────────────────────────────
 $parkingSpots = [];
 $result = $conn->query(
-    "SELECT a.id_asset, a.codice_asset, a.stato,
+    "SELECT a.id_asset, a.codice_asset,
+            CASE WHEN EXISTS (
+                SELECT 1 FROM prenotazioni pr
+                WHERE pr.id_asset = a.id_asset
+                  AND NOW() BETWEEN pr.data_inizio AND pr.data_fine
+            ) THEN 'Occupato' ELSE 'Disponibile' END AS stato,
             COALESCE(p.numero_posto, '-')         AS numero_posto,
             COALESCE(p.coperto, 0)                AS coperto,
             COALESCE(p.colonnina_elettrica, 0)    AS colonnina_elettrica,
@@ -789,9 +807,9 @@ function closeParkingPanel() {
 // ════════════════════════════════════════════════════════
 function renderTimeline(spotId) {
     const now      = new Date();
-    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-    const dayEnd   = new Date(dayStart.getTime() + 86400000);
-    const dayMs    = 86400000;
+    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9,  0, 0);
+    const dayEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 19, 0, 0);
+    const dayMs    = 10 * 3600000; // 09:00 → 19:00 = 10 ore
 
     const rawSlots = (occupiedSlots[spotId] || [])
         .map(s => ({ start: new Date(s.inizio), end: new Date(s.fine) }))
@@ -817,7 +835,7 @@ function renderTimeline(spotId) {
                 </div>`;
     }).join('');
 
-    // Indicatore ora attuale
+    // Indicatore ora attuale (visibile solo se dentro 09:00–19:00)
     const nowPct = ((now - dayStart) / dayMs * 100).toFixed(2);
     const nowMarker = nowPct >= 0 && nowPct <= 100
         ? `<div class="pk-tl-now" style="left:${nowPct}%">
@@ -825,9 +843,9 @@ function renderTimeline(spotId) {
            </div>`
         : '';
 
-    // Etichette ore
-    const labels = [0, 6, 12, 18, 24].map(h => {
-        const pct = (h / 24 * 100).toFixed(1);
+    // Etichette ore: ogni 2 ore da 09:00 a 19:00
+    const labels = [9, 11, 13, 15, 17, 19].map(h => {
+        const pct = ((h - 9) / 10 * 100).toFixed(1);
         return `<span class="pk-tl-label" style="left:${pct}%">${String(h).padStart(2,'0')}:00</span>`;
     }).join('');
 
@@ -853,31 +871,54 @@ function renderTimeline(spotId) {
 // ════════════════════════════════════════════════════════
 function getFreeWindows(spotId) {
     const now = new Date();
-    // Arrotonda ai prossimi 15 min
+
+    // Cursore arrotondato ai prossimi 15 min
     const cursor = new Date(now);
     cursor.setMinutes(Math.ceil(cursor.getMinutes() / 15) * 15, 0, 0);
     if (cursor <= now) cursor.setMinutes(cursor.getMinutes() + 15);
 
-    const horizon = new Date(cursor.getTime() + 7 * 86400000);
-
     const occupied = (occupiedSlots[spotId] || [])
         .map(s => ({ start: new Date(s.inizio), end: new Date(s.fine) }))
-        .filter(s => s.end > cursor)
         .sort((a, b) => a.start - b.start);
 
     const windows = [];
-    let ptr = new Date(cursor);
 
-    for (const occ of occupied) {
-        if (occ.start > ptr) {
-            windows.push({ start: new Date(ptr), end: new Date(occ.start) });
+    // Scansiona giorno per giorno (max 7), cercando spazi liberi dentro 09:00–19:00
+    for (let d = 0; d < 7 && windows.length < 4; d++) {
+        const base     = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d);
+        const winStart = new Date(base.getFullYear(), base.getMonth(), base.getDate(),  9, 0, 0);
+        const winEnd   = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 19, 0, 0);
+
+        // Oggi: partiamo dal cursore, non prima delle 09:00
+        const from = d === 0
+            ? new Date(Math.max(cursor.getTime(), winStart.getTime()))
+            : winStart;
+
+        // Se siamo già oltre le 19:00 di questo giorno, saltalo
+        if (from >= winEnd) continue;
+
+        // Prenotazioni che si sovrappongono a [from, winEnd]
+        const dayOcc = occupied.filter(s => s.end > from && s.start < winEnd);
+
+        let ptr = new Date(from);
+
+        for (const occ of dayOcc) {
+            if (occ.start > ptr) {
+                // Buco libero prima di questa prenotazione
+                const slotEnd = new Date(Math.min(occ.start.getTime(), winEnd.getTime()));
+                windows.push({ start: new Date(ptr), end: slotEnd });
+                if (windows.length >= 4) break;
+            }
+            // Avanza il puntatore alla fine della prenotazione (max 19:00)
+            if (occ.end > ptr) ptr = new Date(Math.min(occ.end.getTime(), winEnd.getTime()));
         }
-        if (occ.end > ptr) ptr = new Date(occ.end);
-        if (windows.length >= 4) break;
+
+        // Spazio residuo fino alle 19:00
+        if (windows.length < 4 && ptr < winEnd) {
+            windows.push({ start: new Date(ptr), end: winEnd });
+        }
     }
-    if (windows.length < 4 && ptr < horizon) {
-        windows.push({ start: new Date(ptr), end: horizon });
-    }
+
     return windows.slice(0, 4);
 }
 
@@ -889,24 +930,17 @@ function renderFreeSlots(spotId) {
     }
 
     return windows.map((fw, i) => {
-        const durMs   = fw.end - fw.start;
-        const durH    = Math.floor(durMs / 3600000);
-        const durM    = Math.floor((durMs % 3600000) / 60000);
-        const isLong  = durMs > 86400000;
+        const durMs  = fw.end - fw.start;
+        const durH   = Math.floor(durMs / 3600000);
+        const durM   = Math.floor((durMs % 3600000) / 60000);
 
-        const durLabel = isLong
-            ? 'Più di 1 giorno'
-            : durH > 0 ? `${durH}h${durM > 0 ? ' ' + durM + 'm' : ''}` : `${durM}m`;
+        const durLabel = durH > 0
+            ? `${durH}h${durM > 0 ? ' ' + durM + 'm' : ''}`
+            : `${durM}m`;
 
-        const endLabel = isLong
-            ? fmtDay(fw.end) + ' e oltre'
-            : fmtTime(fw.end);
+        const endLabel = fmtTime(fw.end);
 
-        // Suggerisci max 4h come durata precompilata (o fino alla fine se < 4h)
-        const suggestEnd = new Date(Math.min(
-            fw.start.getTime() + 4 * 3600000,
-            fw.end.getTime()
-        ));
+        const suggestEnd = fw.end;
 
         return `
             <div class="pk-free-slot" onclick="prefillSlot('${toLocalISO(fw.start)}', '${toLocalISO(suggestEnd)}')">
@@ -965,8 +999,15 @@ function updateDuration() {
         document.getElementById('data-fine').min = startVal;
     }
 
-    const now = new Date();
-    if (new Date(startVal) < now) {
+    const now       = new Date();
+    const startDate = new Date(startVal);
+    const endDate   = new Date(endVal);
+    const startMins = startDate.getHours() * 60 + startDate.getMinutes();
+    const endMins   = endDate.getHours()   * 60 + endDate.getMinutes();
+
+    const sameDay = startDate.toDateString() === endDate.toDateString();
+
+    if (startDate < now) {
         preview.style.display = 'none';
         error.style.display   = '';
         error.innerHTML = '⚠️ Non puoi prenotare nel passato.';
@@ -978,6 +1019,38 @@ function updateDuration() {
         preview.style.display = 'none';
         error.style.display   = '';
         error.innerHTML = '⚠️ La data di fine deve essere successiva alla data di inizio.';
+        btn.disabled = true;
+        return;
+    }
+
+    if (startMins < 9 * 60) {
+        preview.style.display = 'none';
+        error.style.display   = '';
+        error.innerHTML = '⚠️ L\'orario di inizio non può essere prima delle 09:00.';
+        btn.disabled = true;
+        return;
+    }
+
+    if (startMins >= 19 * 60) {
+        preview.style.display = 'none';
+        error.style.display   = '';
+        error.innerHTML = '⚠️ L\'orario di inizio non può essere dalle 19:00 in poi.';
+        btn.disabled = true;
+        return;
+    }
+
+    if (endMins > 19 * 60) {
+        preview.style.display = 'none';
+        error.style.display   = '';
+        error.innerHTML = '⚠️ L\'orario di fine non può superare le 19:00.';
+        btn.disabled = true;
+        return;
+    }
+
+    if (!sameDay) {
+        preview.style.display = 'none';
+        error.style.display   = '';
+        error.innerHTML = '⚠️ La prenotazione deve essere nella stessa giornata (09:00–19:00).';
         btn.disabled = true;
         return;
     }

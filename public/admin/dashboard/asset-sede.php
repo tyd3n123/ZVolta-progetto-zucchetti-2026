@@ -75,7 +75,7 @@ if ($result) {
     <div class="selection-container">
         
         <!-- Card Scrivania con Cassettiera e Armadietto -->
-        <div class="asset-card" onclick="location.href='../uffici/index.php'" tabindex="0" role="button" aria-label="Vai alle scrivanie con cassettiera e armadietto">
+        <div class="asset-card" onclick="location.href='../uffici-tipologia-a/index.php'" tabindex="0" role="button" aria-label="Vai alle scrivanie con cassettiera e armadietto">
             <div class="card-icon office-icon">
                 🪑
             </div>
@@ -107,7 +107,7 @@ if ($result) {
         </div>
 
         <!-- Card Scrivania con Monitor Esterno -->
-        <div class="asset-card" onclick="location.href='../uffici/index.php'" tabindex="0" role="button" aria-label="Vai alle scrivanie con monitor esterno">
+        <div class="asset-card" onclick="location.href='../uffici-tipologia-a2/index.php'" tabindex="0" role="button" aria-label="Vai alle scrivanie con monitor esterno">
             <div class="card-icon meeting-icon">
                 🖥️
             </div>
