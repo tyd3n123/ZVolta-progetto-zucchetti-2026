@@ -165,10 +165,10 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
       <p class="uf-page-sub">Clicca su una scrivania nella planimetria per prenotarla</p>
     </div>
     <div class="uf-stats-row">
-      <span class="uf-stat-chip uf-stat-chip--total">&#x1F5A5;&#xFE0F; <?= $totalDesks ?> scrivanie</span>
-      <span class="uf-stat-chip uf-stat-chip--avail">&#x2713; <?= $availDesks ?> libere</span>
+      <span class="uf-stat-chip uf-stat-chip--total"><?= $totalDesks ?> scrivanie</span>
+      <span class="uf-stat-chip uf-stat-chip--avail"><?= $availDesks ?> libere</span>
       <?php if ($occDesks > 0):?>
-      <span class="uf-stat-chip uf-stat-chip--occ">&#x2717; <?= $occDesks ?> occupate</span>
+      <span class="uf-stat-chip uf-stat-chip--occ"><?= $occDesks ?> occupate</span>
       <?php endif;?>
     </div>
   </div>
@@ -226,7 +226,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
 
         <!-- Timeline oggi -->
         <div>
-          <p class="uf-section-lbl" style="margin-bottom:10px">&#x1F550; Disponibilita oggi</p>
+          <p class="uf-section-lbl" style="margin-bottom:10px"> Disponibilita oggi</p>
           <div id="panel-timeline"></div>
         </div>
 
@@ -234,7 +234,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
 
         <!-- Prossimi slot liberi -->
         <div>
-          <p class="uf-section-lbl" style="margin-bottom:4px">&#x2705; Prossimi periodi liberi</p>
+          <p class="uf-section-lbl" style="margin-bottom:4px"> Prossimi periodi liberi</p>
           <p style="font-size:11px;color:var(--clr-text-3);margin:0 0 10px">Clicca un periodo per precompilare le date</p>
           <div id="panel-free-slots"></div>
         </div>
@@ -243,7 +243,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
 
         <!-- Form prenotazione -->
         <div>
-          <p class="uf-section-lbl" style="margin-bottom:12px">&#x270F;&#xFE0F; Prenota</p>
+          <p class="uf-section-lbl" style="margin-bottom:12px"> Prenota</p>
           <form method="POST" id="booking-form">
             <input type="hidden" name="action"   value="book">
             <input type="hidden" name="id_asset" id="panel-asset-id" value="">
@@ -278,7 +278,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
       <span class="uf-count-badge"><?= count($userBookings) ?></span>
     </div>
     <?php if (empty($userBookings)):?>
-      <div class="uf-empty"><span>&#x1F5A5;&#xFE0F;</span><p>Nessuna prenotazione scrivania attiva</p></div>
+      <div class="uf-empty"><span></span><p>Nessuna prenotazione scrivania attiva</p></div>
     <?php else:?>
       <div class="uf-bookings-list">
         <?php foreach ($userBookings as $b):

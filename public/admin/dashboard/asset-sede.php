@@ -52,15 +52,15 @@ if ($result) {
     <div class="header-left">
         <h1>Northstar</h1>
         <nav class="header-breadcrumb">
-            <a href="index.php">Dashboard</a>
+            <a href="index.php" style="color: black;">Dashboard</a>
             <span class="bc-sep">/</span>
-            <a href="asset-disponibili.php">Asset Disponibili</a>
+            <a href="asset-disponibili.php" style="color: black;">Asset Disponibili</a>
             <span class="bc-sep">/</span>
-            <span class="bc-current">Asset Sede</span>
+            <span class="bc-current" style="color: var(--clr-text-1);">Asset Sede</span>
         </nav>
     </div>
     <div class="uf-user-pill">
-        <?= htmlspecialchars($userInfo['nome'].' '.$userInfo['cognome']) ?>
+        <?= htmlspecialchars($userInfo['nome'].' '.$userInfo['cognome']) .  ' - ' ?>
         <span class="uf-role"><?= htmlspecialchars($userInfo['ruolo']) ?></span>
     </div>
 </header>
