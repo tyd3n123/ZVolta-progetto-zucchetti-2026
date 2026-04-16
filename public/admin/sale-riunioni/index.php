@@ -195,7 +195,10 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
         </div>
     <?php endif; ?>
 
-    <!-- ══ MAPPA + PANNELLO ════════════════════════════ -->
+    <!-- Backdrop sfocato -->
+    <div class="sr-panel-backdrop" id="sr-backdrop" onclick="closeRoomPanel()"></div>
+
+    <!-- ══ MAPPA ═══════════════════════════════════════ -->
     <div class="sr-map-layout" id="map-layout">
 
         <!-- ── Zona mappa canvas ───────────────────────── -->
@@ -236,8 +239,10 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
 
         </div><!-- /.sr-map-zone -->
 
-        <!-- ── Pannello laterale slide-in ─────────────── -->
-        <div class="sr-side-panel" id="side-panel">
+    </div><!-- /.sr-map-layout -->
+
+    <!-- Pannello laterale fixed overlay -->
+    <div class="sr-side-panel" id="side-panel">
 
             <div class="sr-panel-top">
                 <div>
@@ -294,9 +299,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
                 </div>
 
             </div><!-- /.sr-panel-body -->
-        </div><!-- /.sr-side-panel -->
-
-    </div><!-- /.sr-map-layout -->
+    </div><!-- /.sr-side-panel -->
 
     <!-- ── Le tue prenotazioni attive ─────────────────── -->
     <div class="sr-bookings-strip">
@@ -790,11 +793,13 @@ function openRoomPanel(id) {
     }
 
     document.getElementById('panel-asset-id').value = id;
+    document.getElementById('sr-backdrop').classList.add('visible');
     document.getElementById('side-panel').classList.add('open');
 }
 
 function closeRoomPanel() {
     document.getElementById('side-panel').classList.remove('open');
+    document.getElementById('sr-backdrop').classList.remove('visible');
     selectedId = null;
     draw();
 }

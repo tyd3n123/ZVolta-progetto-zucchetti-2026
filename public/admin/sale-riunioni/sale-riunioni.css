@@ -112,28 +112,18 @@
    MAP LAYOUT — layout principale con pannello laterale
    ════════════════════════════════════════════════════ */
 .sr-map-layout {
-    display: flex;
-    gap: 0;
     min-height: 600px;
     background: var(--clr-surface);
     border: 1px solid var(--clr-border);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-md);
-    overflow: hidden;
-    position: relative;
 }
 
-/* ── Zona mappa (sempre visibile) ───────────────────── */
+/* ── Zona mappa ─────────────────────────────────────── */
 .sr-map-zone {
-    flex: 1;
-    min-width: 0;
+    width: 100%;
     padding: 28px;
-    transition: all .35s cubic-bezier(.4,0,.2,1);
     overflow-y: auto;
-}
-
-.sr-map-zone.panel-open {
-    /* quando il pannello è aperto la mappa si restringe */
 }
 
 .sr-map-header {
@@ -333,14 +323,31 @@
 .sr-panel-divider.visible { display: block; }
 
 /* ════════════════════════════════════════════════════
-   SLIDE-IN PANEL (2/3 della larghezza)
+   BACKDROP + FIXED OVERLAY PANEL
    ════════════════════════════════════════════════════ */
+.sr-panel-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.35);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .35s ease;
+}
+
+.sr-panel-backdrop.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
 .sr-side-panel {
-    position: absolute;
+    position: fixed;
     top: 0;
     right: 0;
-    width: 66.666%;
-    height: 100%;
+    width: 520px;
+    height: 100vh;
     background: var(--clr-surface);
     border-left: 1px solid var(--clr-border);
     display: flex;
@@ -348,12 +355,12 @@
     transform: translateX(100%);
     transition: transform .35s cubic-bezier(.4,0,.2,1);
     overflow: hidden;
-    z-index: 10;
+    z-index: 1000;
+    box-shadow: -8px 0 40px rgba(20,18,50,.22);
 }
 
 .sr-side-panel.open {
     transform: translateX(0);
-    box-shadow: -8px 0 32px rgba(20,18,50,.12);
 }
 
 /* ── Panel header ───────────────────────────────────── */
@@ -403,20 +410,19 @@
     flex: 1;
     overflow-y: auto;
     padding: 24px 28px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    align-content: start;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 /* ── Info card dentro il pannello ───────────────────── */
 .sr-info-section {
-    grid-column: 1 / -1;
+    width: 100%;
 }
 
 .sr-info-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
     margin-bottom: 20px;
 }
