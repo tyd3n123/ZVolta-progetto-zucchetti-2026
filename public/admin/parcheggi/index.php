@@ -221,9 +221,9 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
 
             <!-- Stats bar -->
             <div class="pk-map-topbar">
-                <span class="pk-map-label">📍 Mappa Parcheggi — Sede</span>
+                <span class="pk-map-label">Mappa Parcheggi — Sede</span>
                 <div class="pk-map-chips">
-                    <span class="pk-chip pk-chip--total">🚗 <?= $totalSpots ?> stalli</span>
+                    <span class="pk-chip pk-chip--total"><?= $totalSpots ?> posti</span>
                     <span class="pk-chip pk-chip--avail">✓ <?= $availCount ?> liberi</span>
                     <?php if ($occCount > 0): ?>
                     <span class="pk-chip pk-chip--occ">✗ <?= $occCount ?> occupati</span>
@@ -266,20 +266,20 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
 
                 <!-- Sezione 2: Timeline oggi -->
                 <div class="pk-panel-section">
-                    <p class="pk-panel-section-title">🕐 Disponibilità oggi</p>
+                    <p class="pk-panel-section-title">Disponibilità oggi</p>
                     <div id="panel-timeline"></div>
                 </div>
 
                 <!-- Sezione 3: Prossimi slot liberi -->
                 <div class="pk-panel-section">
-                    <p class="pk-panel-section-title">✅ Prossimi periodi liberi</p>
+                    <p class="pk-panel-section-title">Prossimi periodi liberi</p>
                     <p class="pk-panel-section-hint">Clicca un periodo per compilare automaticamente le date</p>
                     <div id="panel-free-slots"></div>
                 </div>
 
                 <!-- Sezione 4: Form prenotazione -->
                 <div class="pk-panel-section pk-panel-form-section">
-                    <p class="pk-panel-section-title">✏️ Prenota questo stallo</p>
+                    <p class="pk-panel-section-title">Prenota questo stallo</p>
 
                     <form method="POST" id="booking-form">
                         <input type="hidden" name="action"   value="book">
@@ -324,7 +324,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
         </div>
 
         <?php if (empty($userBookings)): ?>
-            <div class="pk-empty"><span>🚗</span><p>Nessuna prenotazione parcheggio attiva</p></div>
+            <div class="pk-empty"><span></span><p>Nessuna prenotazione parcheggio attiva</p></div>
         <?php else: ?>
             <div class="pk-bookings-list">
                 <?php foreach ($userBookings as $b):
