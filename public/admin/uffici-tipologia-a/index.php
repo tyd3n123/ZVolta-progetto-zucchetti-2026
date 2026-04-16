@@ -31,12 +31,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data_inizio = $_POST['data_inizio'] ?? '';
         $data_fine   = $_POST['data_fine']   ?? '';
 
+        $tsInizio = strtotime($data_inizio);
+        $tsFine   = strtotime($data_fine);
+        $hInizio  = (int)date('H', $tsInizio) * 60 + (int)date('i', $tsInizio);
+        $hFine    = (int)date('H', $tsFine)   * 60 + (int)date('i', $tsFine);
+
         if (!$id_asset || !$data_inizio || !$data_fine) {
             $feedback = ['type'=>'error','msg'=>'Compila tutti i campi prima di procedere.'];
-        } elseif (strtotime($data_inizio) < time()) {
+        } elseif ($tsInizio < time()) {
             $feedback = ['type'=>'error','msg'=>'Non puoi prenotare nel passato.'];
-        } elseif (strtotime($data_fine) <= strtotime($data_inizio)) {
+        } elseif ($tsFine <= $tsInizio) {
             $feedback = ['type'=>'error','msg'=>'La data fine deve essere successiva alla data di inizio.'];
+        } elseif (date('Y-m-d', $tsInizio) !== date('Y-m-d', $tsFine)) {
+            $feedback = ['type'=>'error','msg'=>'La prenotazione deve essere nella stessa giornata (09:00–19:00).'];
+        } elseif ($hInizio < 9 * 60) {
+            $feedback = ['type'=>'error','msg'=>'L\'orario di inizio non può essere prima delle 09:00.'];
+        } elseif ($hInizio >= 19 * 60) {
+            $feedback = ['type'=>'error','msg'=>'L\'orario di inizio non può essere dalle 19:00 in poi.'];
+        } elseif ($hFine > 19 * 60) {
+            $feedback = ['type'=>'error','msg'=>'L\'orario di fine non può superare le 19:00.'];
         } else {
             $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM prenotazioni WHERE id_asset=? AND data_inizio<? AND data_fine>?");
             $stmt->bind_param("iss", $id_asset, $data_fine, $data_inizio); $stmt->execute();
@@ -91,7 +104,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // ── Fetch scrivanie TIPO-A (id_tipologia=1) ───────────
 $desks = [];
-$result = $conn->query("SELECT id_asset, codice_asset, stato FROM asset WHERE id_tipologia=1 AND mappa='Sede' ORDER BY codice_asset");
+$result = $conn->query(
+    "SELECT a.id_asset, a.codice_asset,
+            CASE WHEN EXISTS (
+                SELECT 1 FROM prenotazioni pr
+                WHERE pr.id_asset = a.id_asset
+                  AND pr.data_fine > NOW()
+                  AND DATE(pr.data_inizio) = CURDATE()
+            ) THEN 'Occupato' ELSE 'Disponibile' END AS stato
+     FROM asset a
+     WHERE a.id_tipologia=1 AND a.mappa='Sede'
+     ORDER BY a.codice_asset"
+);
 if ($result) {
     while ($row = $result->fetch_assoc()) {
         $desks[] = ['id' => (int)$row['id_asset'], 'name' => $row['codice_asset'], 'status' => $row['stato']];
@@ -624,9 +648,10 @@ function closePanel() {
 // ════════════════════════════════════════════════════════
 function renderTimeline(assetId) {
     const now      = new Date();
-    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-    const dayEnd   = new Date(dayStart.getTime() + 86400000);
-    const dayMs    = 86400000;
+    const today    = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 0, 0);
+    const dayEnd   = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 19, 0, 0);
+    const dayMs    = 10 * 3600000; // 09:00–19:00 = 10 h
 
     const rawSlots = (occupiedSlots[assetId] || [])
         .map(s => ({ start: new Date(s.inizio), end: new Date(s.fine) }))
@@ -658,8 +683,8 @@ function renderTimeline(assetId) {
                <div style="width:2px;height:26px;background:#f59e0b;border-radius:1px"></div>
                <span style="font-size:9px;font-weight:700;color:#f59e0b;margin-top:2px">ora</span></div>` : '';
 
-    const labels = [0,6,12,18,24].map(hh =>
-        `<span style="position:absolute;left:${hh/24*100}%;transform:translateX(-50%);font-size:9px;color:var(--clr-text-3);font-weight:600;font-family:var(--font-mono)">${String(hh).padStart(2,'0')}:00</span>`
+    const labels = [9,11,13,15,17,19].map(hh =>
+        `<span style="position:absolute;left:${(hh-9)/10*100}%;transform:translateX(-50%);font-size:9px;color:var(--clr-text-3);font-weight:600;font-family:var(--font-mono)">${String(hh).padStart(2,'0')}:00</span>`
     ).join('');
 
     const n = rawSlots.length;
@@ -681,24 +706,43 @@ function renderTimeline(assetId) {
 // ════════════════════════════════════════════════════════
 function getFreeWindows(assetId) {
     const now = new Date();
-    const cursor = new Date(now);
-    cursor.setMinutes(Math.ceil(cursor.getMinutes() / 15) * 15, 0, 0);
-    if (cursor <= now) cursor.setMinutes(cursor.getMinutes() + 15);
-    const horizon = new Date(cursor.getTime() + 7 * 86400000);
-
     const occupied = (occupiedSlots[assetId] || [])
         .map(s => ({ start: new Date(s.inizio), end: new Date(s.fine) }))
-        .filter(s => s.end > cursor)
         .sort((a, b) => a.start - b.start);
 
     const windows = [];
-    let ptr = new Date(cursor);
-    for (const occ of occupied) {
-        if (occ.start > ptr) windows.push({ start: new Date(ptr), end: new Date(occ.start) });
-        if (occ.end > ptr) ptr = new Date(occ.end);
-        if (windows.length >= 4) break;
+    for (let d = 0; d < 7 && windows.length < 4; d++) {
+        const base     = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d);
+        const winStart = new Date(base); winStart.setHours(9, 0, 0, 0);
+        const winEnd   = new Date(base); winEnd.setHours(19, 0, 0, 0);
+
+        // Se siamo oggi, il cursore parte dall'ora attuale (arrotondata a +15 min)
+        let ptr;
+        if (d === 0) {
+            ptr = new Date(now);
+            ptr.setSeconds(0, 0);
+            ptr.setMinutes(Math.ceil(ptr.getMinutes() / 15) * 15);
+            if (ptr <= now) ptr.setMinutes(ptr.getMinutes() + 15);
+            if (ptr < winStart) ptr = new Date(winStart);
+        } else {
+            ptr = new Date(winStart);
+        }
+        if (ptr >= winEnd) continue;
+
+        const dayOcc = occupied.filter(o => o.end > winStart && o.start < winEnd);
+        for (const occ of dayOcc) {
+            const oS = Math.max(occ.start.getTime(), winStart.getTime());
+            const oE = Math.min(occ.end.getTime(), winEnd.getTime());
+            if (oS > ptr.getTime()) {
+                windows.push({ start: new Date(ptr), end: new Date(oS) });
+                if (windows.length >= 4) break;
+            }
+            if (oE > ptr.getTime()) ptr = new Date(oE);
+        }
+        if (windows.length < 4 && ptr.getTime() < winEnd.getTime()) {
+            windows.push({ start: new Date(ptr), end: new Date(winEnd) });
+        }
     }
-    if (windows.length < 4 && ptr < horizon) windows.push({ start: new Date(ptr), end: horizon });
     return windows.slice(0, 4);
 }
 
@@ -708,12 +752,10 @@ function renderFreeSlots(assetId) {
 
     return windows.map(fw => {
         const durMs   = fw.end - fw.start;
-        const isLong  = durMs > 86400000;
         const durH    = Math.floor(durMs / 3600000);
         const durM    = Math.floor((durMs % 3600000) / 60000);
-        const durLbl  = isLong ? 'Piu di 1 giorno' : (durH > 0 ? `${durH}h${durM > 0 ? ' ' + durM + 'm' : ''}` : `${durM}m`);
-        const endLbl  = isLong ? fmtDay(fw.end) + ' e oltre' : fmtTime(fw.end);
-        const sugEnd  = new Date(Math.min(fw.start.getTime() + 4 * 3600000, fw.end.getTime()));
+        const durLbl  = durH > 0 ? `${durH}h${durM > 0 ? ' ' + durM + 'm' : ''}` : `${durM}m`;
+        const sugEnd  = fw.end;
         return `<div onclick="prefillSlot('${toLocalISO(fw.start)}','${toLocalISO(sugEnd)}')"
                      onmouseover="this.style.background='#bbf7d0'" onmouseout="this.style.background='var(--clr-success-bg)'"
                      style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;
@@ -721,7 +763,7 @@ function renderFreeSlots(assetId) {
                             border-radius:var(--radius-md);cursor:pointer;margin-bottom:6px;transition:var(--transition)">
                     <div>
                         <div style="font-size:10px;font-weight:700;color:var(--clr-success);text-transform:uppercase;letter-spacing:.5px">${fmtDay(fw.start)}</div>
-                        <div style="font-size:12px;font-weight:600;color:var(--clr-text-1);font-family:var(--font-mono)">${fmtTime(fw.start)} \u2192 ${endLbl}</div>
+                        <div style="font-size:12px;font-weight:600;color:var(--clr-text-1);font-family:var(--font-mono)">${fmtTime(fw.start)} \u2192 ${fmtTime(fw.end)}</div>
                     </div>
                     <div style="text-align:right">
                         <div style="font-size:11px;font-weight:700;color:var(--clr-text-2);font-family:var(--font-mono)">${durLbl}</div>
@@ -755,28 +797,41 @@ function updateDuration() {
     const btn      = document.getElementById('submit-btn');
     const assetId  = parseInt(document.getElementById('panel-asset-id').value);
 
+    function showErr(msg) {
+        preview.style.display = 'none';
+        error.style.display   = '';
+        error.innerHTML       = '\u26A0\uFE0F ' + msg;
+        btn.disabled          = true;
+    }
+
     if (!startVal || !endVal) { preview.style.display='none'; error.style.display='none'; btn.disabled=false; return; }
     if (startVal) document.getElementById('data-fine').min = startVal;
 
-    if (new Date(startVal) < new Date()) {
-        preview.style.display='none'; error.style.display=''; error.innerHTML='\u26A0\uFE0F Non puoi prenotare nel passato.'; btn.disabled=true; return;
-    }
-    const ms = new Date(endVal) - new Date(startVal);
-    if (ms <= 0) {
-        preview.style.display='none'; error.style.display=''; error.innerHTML='\u26A0\uFE0F La data fine deve essere successiva alla data di inizio.'; btn.disabled=true; return;
-    }
+    const sDate = new Date(startVal);
+    const eDate = new Date(endVal);
+    const startMins = sDate.getHours() * 60 + sDate.getMinutes();
+    const endMins   = eDate.getHours() * 60 + eDate.getMinutes();
+    const sameDay   = sDate.toDateString() === eDate.toDateString();
+
+    if (sDate < new Date()) { showErr('Non puoi prenotare nel passato.'); return; }
+    if (eDate <= sDate)     { showErr('La data fine deve essere successiva alla data di inizio.'); return; }
+    if (!sameDay)           { showErr('La prenotazione deve essere nella stessa giornata (09:00\u201319:00).'); return; }
+    if (startMins < 9 * 60) { showErr('L\'orario di inizio non pu\u00f2 essere prima delle 09:00.'); return; }
+    if (startMins >= 19 * 60){ showErr('L\'orario di inizio non pu\u00f2 essere dalle 19:00 in poi.'); return; }
+    if (endMins > 19 * 60)  { showErr('L\'orario di fine non pu\u00f2 superare le 19:00.'); return; }
     if (hasConflict(startVal, endVal, assetId)) {
-        preview.style.display='none'; error.style.display=''; error.innerHTML='\u26A0\uFE0F Periodo sovrapposto a una prenotazione esistente.<br><small>Scegli uno dei periodi liberi suggeriti sopra.</small>'; btn.disabled=true; return;
+        showErr('Periodo sovrapposto a una prenotazione esistente.<br><small>Scegli uno dei periodi liberi suggeriti sopra.</small>'); return;
     }
 
     error.style.display='none'; btn.disabled=false;
+    const ms = eDate - sDate;
     const days=Math.floor(ms/86400000), hrs=Math.floor((ms%86400000)/3600000), mins=Math.floor((ms%3600000)/60000);
     const parts=[];
     if (days>0) parts.push(days+' giorn'+(days>1?'i':'o'));
     if (hrs>0)  parts.push(hrs+' or'+(hrs>1?'e':'a'));
     if (mins>0) parts.push(mins+' minut'+(mins>1?'i':'o'));
     preview.style.display='';
-    preview.innerHTML='\u23F1\uFE0F <strong>'+(parts.join(' ')||'meno di un minuto')+'</strong> \u2014 '+fmtDateTime(new Date(startVal))+' \u2192 '+fmtDateTime(new Date(endVal));
+    preview.innerHTML='\u23F1\uFE0F <strong>'+(parts.join(' ')||'meno di un minuto')+'</strong> \u2014 '+fmtDateTime(sDate)+' \u2192 '+fmtDateTime(eDate);
 }
 
 // ════════════════════════════════════════════════════════
