@@ -169,7 +169,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
         </nav>
     </div>
     <div class="pk-user-pill">
-        <?= htmlspecialchars($userInfo['nome'] . ' ' . $userInfo['cognome']) ?>
+        <?= htmlspecialchars($userInfo['nome'] . ' ' . $userInfo['cognome']) .  ' - ' ?>
         <span class="pk-role"><?= htmlspecialchars($userInfo['ruolo']) ?></span>
     </div>
 </header>
@@ -179,7 +179,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
     <!-- ── Titolo + Stats ──────────────────────────────── -->
     <div class="pk-title-row">
         <div>
-            <h2 class="pk-page-title">🚗 Parcheggi</h2>
+            <h2 class="pk-page-title">Parcheggi</h2>
             <p class="pk-page-sub">Clicca su uno stallo nella cartina per prenotarlo</p>
         </div>
     </div>

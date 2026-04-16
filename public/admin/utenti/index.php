@@ -157,12 +157,9 @@ function durStr(string $start, string $end): string {
         <nav class="header-breadcrumb">
             <a href="../dashboard/index.php">Dashboard</a>
             <span class="bc-sep">/</span>
-            <span>Utenti</span>
-            <span class="bc-sep">/</span>
             <span class="bc-current"><?php echo htmlspecialchars($user['nome'] . ' ' . $user['cognome']); ?></span>
         </nav>
     </div>
-    <a href="../dashboard/index.php" class="signout-btn">← Dashboard</a>
 </header>
 
 <div class="utenti-page">

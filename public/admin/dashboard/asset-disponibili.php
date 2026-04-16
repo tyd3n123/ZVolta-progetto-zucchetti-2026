@@ -4,7 +4,7 @@ require_once __DIR__ . "/../../../config/config.php";
 
 // Verifica autenticazione
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true || !isset($_SESSION['id_utente'])) {
-    header("Location: ../login.php"); 
+    header("Location: ../../auth/login.php"); 
     exit();
 }
 
@@ -24,7 +24,7 @@ $stmt->close();
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Asset Disponibili | Northstar</title>
     <link rel="stylesheet" href="../dashboard/dashboard.css">
-    <link rel="stylesheet" href="asset-disponibili.css">
+    <link rel="stylesheet" href="./asset-disponibili.css">
 </head>
 <body>
 
@@ -32,14 +32,14 @@ $stmt->close();
     <div class="header-left">
         <h1>Northstar</h1>
         <nav class="header-breadcrumb">
-            <a href="index.php">Dashboard</a>
+            <a href="../dashboard/index.php">Dashboard</a>
             <span class="bc-sep">/</span>
             <span class="bc-current">Asset Disponibili</span>
         </nav>
     </div>
-    <div class="uf-user-pill">
-        <?= htmlspecialchars($userInfo['nome'].' '.$userInfo['cognome']) ?>
-        <span class="uf-role"><?= htmlspecialchars($userInfo['ruolo']) ?></span>
+    <div class="pk-user-pill">
+        <?= htmlspecialchars($userInfo['nome'] . ' ' . $userInfo['cognome']) .  ' - ' ?>
+        <span class="pk-role"><?= htmlspecialchars($userInfo['ruolo']) ?></span>
     </div>
 </header>
 

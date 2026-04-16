@@ -41,19 +41,6 @@
     font-size: 13px; color: rgba(255,255,255,.55); margin: 0;
 }
 
-.pk-user-pill {
-    display: inline-flex; align-items: center; gap: 8px;
-    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.15);
-    color: rgba(255,255,255,.9); padding: 6px 14px;
-    border-radius: 20px; font-size: 13px; font-weight: 500;
-    backdrop-filter: blur(8px); white-space: nowrap;
-}
-.pk-role {
-    background: rgba(255,255,255,.15); padding: 2px 8px;
-    border-radius: 10px; font-size: 11px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: .5px;
-}
-
 /* ── Feedback ───────────────────────────────────────── */
 .pk-feedback {
     display: flex; align-items: center; gap: 10px;

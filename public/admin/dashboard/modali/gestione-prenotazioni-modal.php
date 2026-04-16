@@ -34,8 +34,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
         exit();
     }
 
+    // Controllo: data inizio non può essere nel passato
+    $now = new DateTime();
+    $dtInizio = new DateTime($data_inizio);
+    if ($dtInizio < $now) {
+        echo json_encode(['success' => false, 'error' => 'Non è possibile modificare una prenotazione con data di inizio nel passato.']);
+        exit();
+    }
+
     if (strtotime($data_fine) <= strtotime($data_inizio)) {
         echo json_encode(['success' => false, 'error' => 'La data di fine deve essere successiva alla data di inizio.']);
+        exit();
+    }
+
+    // 1. Controllo: recupera l'asset della prenotazione corrente
+    $stmt = $conn->prepare("SELECT id_asset FROM prenotazioni WHERE id_prenotazione = ?");
+    $stmt->bind_param("i", $id_prenotazione);
+    $stmt->execute();
+    $currentBooking = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$currentBooking) {
+        echo json_encode(['success' => false, 'error' => 'Prenotazione non trovata.']);
+        exit();
+    }
+
+    $id_asset = $currentBooking['id_asset'];
+
+    // 2. Controllo: verifica sovrapposizioni con altre prenotazioni
+    $stmt = $conn->prepare(
+        "SELECT COUNT(*) as count FROM prenotazioni
+         WHERE id_asset = ?
+         AND id_prenotazione != ?
+         AND data_inizio < ?
+         AND data_fine > ?"
+    );
+    $stmt->bind_param("iiss", $id_asset, $id_prenotazione, $data_fine, $data_inizio);
+    $stmt->execute();
+    $overlap = $stmt->get_result()->fetch_assoc()['count'];
+    $stmt->close();
+
+    if ($overlap > 0) {
+        echo json_encode(['success' => false, 'error' => 'L\'asset è già prenotato nel periodo selezionato.']);
         exit();
     }
 
