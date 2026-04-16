@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 15, 2026 at 04:35 PM
+-- Generation Time: Apr 17, 2026 at 12:11 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -49,7 +49,7 @@ INSERT INTO `asset` (`id_asset`, `codice_asset`, `id_tipologia`, `stato`, `mappa
 (6, 'AUTO-C-006', 0, 'Disponibile', 'Parcheggio', NULL),
 (7, 'AUTO-C-007', 0, 'Disponibile', 'Parcheggio', NULL),
 (8, 'AUTO-C-008', 0, 'Disponibile', 'Parcheggio', NULL),
-(9, 'AUTO-C-009', 0, 'Disponibile', 'Parcheggio', NULL),
+(9, 'AUTO-C-009', 0, 'Occupato', 'Parcheggio', NULL),
 (10, 'AUTO-C-010', 0, 'Disponibile', 'Parcheggio', NULL),
 (11, 'AUTO-C-011', 0, 'Disponibile', 'Parcheggio', NULL),
 (12, 'AUTO-C-012', 0, 'Disponibile', 'Parcheggio', NULL),
@@ -84,7 +84,7 @@ INSERT INTO `asset` (`id_asset`, `codice_asset`, `id_tipologia`, `stato`, `mappa
 (36, 'TIPO-A-020', 1, 'Disponibile', 'Sede', NULL),
 (35, 'TIPO-A-019', 1, 'Disponibile', 'Sede', NULL),
 (34, 'TIPO-A-018', 1, 'Disponibile', 'Sede', NULL),
-(33, 'TIPO-A-017', 1, 'Disponibile', 'Sede', NULL),
+(33, 'TIPO-A-017', 1, 'Occupato', 'Sede', NULL),
 (32, 'TIPO-A-016', 1, 'Disponibile', 'Sede', NULL),
 (31, 'TIPO-A-015', 1, 'Disponibile', 'Sede', NULL),
 (30, 'TIPO-A-014', 1, 'Disponibile', 'Sede', NULL),
@@ -102,12 +102,12 @@ INSERT INTO `asset` (`id_asset`, `codice_asset`, `id_tipologia`, `stato`, `mappa
 (55, 'TIPO-A2-019', 2, 'Disponibile', 'Sede', NULL),
 (54, 'TIPO-A2-018', 2, 'Disponibile', 'Sede', NULL),
 (53, 'TIPO-A2-017', 2, 'Disponibile', 'Sede', NULL),
-(52, 'TIPO-A2-016', 2, 'Disponibile', 'Sede', NULL),
+(52, 'TIPO-A2-016', 2, 'Occupato', 'Sede', NULL),
 (51, 'TIPO-A2-015', 2, 'Disponibile', 'Sede', NULL),
 (50, 'TIPO-A2-014', 2, 'Disponibile', 'Sede', NULL),
 (65, 'TIPO-A2-029', 2, 'Disponibile', 'Sede', NULL),
 (66, 'TIPO-A2-030', 2, 'Disponibile', 'Sede', NULL),
-(121, 'SALA-001', 3, 'Disponibile', 'Sede', 1),
+(121, 'SALA-001', 3, 'Occupato', 'Sede', 1),
 (122, 'SALA-002', 3, 'Disponibile', 'Sede', 1),
 (123, 'SALA-003', 3, 'Disponibile', 'Sede', 2),
 (124, 'SALA-004', 3, 'Disponibile', 'Sede', 2),
@@ -187,8 +187,20 @@ CREATE TABLE `prenotazioni` (
   `data_inizio` datetime NOT NULL,
   `data_fine` datetime NOT NULL,
   `modificata` tinyint(1) DEFAULT 0,
-  `attiva` tinyint(1) DEFAULT 1
+  `attiva` tinyint(1) DEFAULT 1,
+  `num_modifiche` tinyint(3) UNSIGNED NOT NULL DEFAULT 0
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Dumping data for table `prenotazioni`
+--
+
+INSERT INTO `prenotazioni` (`id_prenotazione`, `id_utente`, `id_asset`, `data_inizio`, `data_fine`, `modificata`, `attiva`, `num_modifiche`) VALUES
+(35, 8, 121, '2026-04-17 09:00:00', '2026-04-17 19:00:00', 0, 1, 0),
+(34, 1, 52, '2026-04-16 18:45:00', '2026-04-16 19:00:00', 0, 1, 0),
+(33, 1, 33, '2026-04-16 18:45:00', '2026-04-16 19:00:00', 0, 1, 0),
+(36, 8, 9, '2026-04-17 09:00:00', '2026-04-17 19:00:00', 0, 1, 0),
+(40, 4, 52, '2026-04-17 10:00:00', '2026-04-17 19:00:00', 0, 1, 1);
 
 -- --------------------------------------------------------
 
@@ -229,9 +241,11 @@ CREATE TABLE `sala_dettagli` (
 --
 
 INSERT INTO `sala_dettagli` (`id_asset`, `capacita`, `attrezzatura`, `orario_apertura`, `orario_chiusura`) VALUES
-(1, 10, 'Proiettore, Lavagna, Videoconferenza', '09:00:00', '18:00:00'),
-(2, 6, 'Monitor, Lavagna', '09:00:00', '18:00:00'),
-(3, 20, 'Proiettore, Microfoni, Videoconferenza', '08:00:00', '19:00:00');
+(121, 10, 'Standard', '09:00:00', '19:00:00'),
+(122, 10, 'Standard', '09:00:00', '19:00:00'),
+(123, 10, 'Standard', '09:00:00', '19:00:00'),
+(124, 10, 'Standard', '09:00:00', '19:00:00'),
+(125, 10, 'Standard', '09:00:00', '19:00:00');
 
 -- --------------------------------------------------------
 
@@ -292,11 +306,12 @@ CREATE TABLE `utenti` (
 
 INSERT INTO `utenti` (`id_utente`, `nome`, `cognome`, `username`, `password`, `id_ruolo`, `id_coordinatore`) VALUES
 (1, 'Mattia', 'Carta', 'CartaMattia', 'Password@123', 3, NULL),
-(2, 'Filippo', 'Gucci', 'GucciFilippo', 'Password@123', 1, NULL),
-(3, 'Miguel', 'Vitali', 'VitaliMiguel', 'Password@123', 1, NULL),
-(4, 'Darius', 'Pop', 'PopDarius', 'Password@123', 2, NULL),
-(6, 'Francesco', 'Herrera', 'HerreraFrancesco', 'Password@123', 1, NULL),
-(7, 'Andrea', 'Cesarini', 'CesariniAndrea', 'Password@123', 1, NULL);
+(2, 'Filippo', 'Gucci', 'GucciFilippo', 'Password@123', 1, 8),
+(3, 'Miguel', 'Vitali', 'VitaliMiguel', 'Password@123', 1, 8),
+(4, 'Darius', 'Pop', 'PopDarius', 'Password@123', 1, 8),
+(6, 'Francesco', 'Herrera', 'HerreraFrancesco', 'Password@123', 1, 8),
+(7, 'Andrea', 'Cesarini', 'CesariniAndrea', 'Password@123', 2, NULL),
+(8, 'Ares', 'Gaba', 'GabaAres', 'Password@123', 2, NULL);
 
 --
 -- Indexes for dumped tables
@@ -386,7 +401,7 @@ ALTER TABLE `parcheggio_dettagli`
 -- AUTO_INCREMENT for table `prenotazioni`
 --
 ALTER TABLE `prenotazioni`
-  MODIFY `id_prenotazione` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `id_prenotazione` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
 
 --
 -- AUTO_INCREMENT for table `ruoli`
@@ -410,7 +425,7 @@ ALTER TABLE `ufficio_dettagli`
 -- AUTO_INCREMENT for table `utenti`
 --
 ALTER TABLE `utenti`
-  MODIFY `id_utente` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id_utente` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
