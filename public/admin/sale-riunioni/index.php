@@ -277,6 +277,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
                 <!-- Info tiles -->
                 <div class="sr-info-section">
                     <div class="sr-info-grid" id="panel-info-grid"></div>
+<<<<<<< HEAD
 
                     <p class="sr-panel-section-title">Periodi già occupati</p>
                     <div class="sr-panel-slots" id="panel-slots"></div>
@@ -285,7 +286,32 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
                 <!-- Form prenotazione -->
                 <div class="sr-panel-form-wrap full-width">
                     <p class="sr-panel-section-title">Nuova Prenotazione</p>
+=======
+                </div>
 
+                <div class="sr-panel-sep"></div>
+>>>>>>> 346e8983946993357bebe75385c4fdd2cea16097
+
+                <!-- Timeline oggi -->
+                <div>
+                    <p class="sr-panel-section-title">🕐 Disponibilità oggi (09:00–19:00)</p>
+                    <div id="panel-timeline"></div>
+                </div>
+
+                <div class="sr-panel-sep"></div>
+
+                <!-- Prossimi slot liberi -->
+                <div>
+                    <p class="sr-panel-section-title">✅ Prossimi periodi liberi</p>
+                    <p style="font-size:11px;color:var(--clr-text-3);margin:0 0 10px">Clicca un periodo per precompilare le date</p>
+                    <div id="panel-free-slots"></div>
+                </div>
+
+                <div class="sr-panel-sep"></div>
+
+                <!-- Form prenotazione -->
+                <div>
+                    <p class="sr-panel-section-title">✏️ Prenota</p>
                     <form method="POST" id="booking-form">
                         <input type="hidden" name="action"   value="book">
                         <input type="hidden" name="id_asset" id="panel-asset-id" value="">
@@ -303,12 +329,17 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
                                    required onchange="updateDuration()">
                         </div>
 
+<<<<<<< HEAD
                         <div id="sr-duration-preview" class="sr-duration-preview" style="display:none;">
-                            <span class="sr-duration-icon">⏱️</span>
+                            <span class="sr-duration-icon"></span>
                             <span id="sr-duration-text"></span>
                         </div>
 
                         <div id="sr-form-error" class="sr-form-error" style="display:none;"></div>
+=======
+                        <div id="sr-duration-preview" class="sr-duration-preview" style="display:none;margin-bottom:10px"></div>
+                        <div id="sr-form-error"       class="sr-form-error"       style="display:none;margin-bottom:10px"></div>
+>>>>>>> 346e8983946993357bebe75385c4fdd2cea16097
 
                         <button type="submit" class="sr-submit-btn" id="submit-btn">
                             Conferma Prenotazione
