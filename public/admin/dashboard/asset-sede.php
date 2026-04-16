@@ -141,7 +141,7 @@ if ($result) {
         <!-- Card Sale Riunioni -->
         <div class="asset-card" onclick="location.href='../sale-riunioni/index.php'" tabindex="0" role="button" aria-label="Vai alle sale riunioni">
             <div class="card-icon meeting-icon">
-                🪑
+                🏢
             </div>
             <div class="card-content">
                 <h2 class="card-title">Sale Riunioni</h2>

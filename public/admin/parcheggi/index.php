@@ -1010,7 +1010,7 @@ function updateDuration() {
     if (startDate < now) {
         preview.style.display = 'none';
         error.style.display   = '';
-        error.innerHTML = '⚠️ Non puoi prenotare nel passato.';
+        error.innerHTML = ' Non puoi prenotare nel passato.';
         btn.disabled = true;
         return;
     }
@@ -1018,7 +1018,7 @@ function updateDuration() {
     if (ms <= 0) {
         preview.style.display = 'none';
         error.style.display   = '';
-        error.innerHTML = '⚠️ La data di fine deve essere successiva alla data di inizio.';
+        error.innerHTML = ' La data di fine deve essere successiva alla data di inizio.';
         btn.disabled = true;
         return;
     }
@@ -1026,7 +1026,7 @@ function updateDuration() {
     if (startMins < 9 * 60) {
         preview.style.display = 'none';
         error.style.display   = '';
-        error.innerHTML = '⚠️ L\'orario di inizio non può essere prima delle 09:00.';
+        error.innerHTML = ' L\'orario di inizio non può essere prima delle 09:00.';
         btn.disabled = true;
         return;
     }
@@ -1034,7 +1034,7 @@ function updateDuration() {
     if (startMins >= 19 * 60) {
         preview.style.display = 'none';
         error.style.display   = '';
-        error.innerHTML = '⚠️ L\'orario di inizio non può essere dalle 19:00 in poi.';
+        error.innerHTML = ' L\'orario di inizio non può essere dalle 19:00 in poi.';
         btn.disabled = true;
         return;
     }
@@ -1042,7 +1042,7 @@ function updateDuration() {
     if (endMins > 19 * 60) {
         preview.style.display = 'none';
         error.style.display   = '';
-        error.innerHTML = '⚠️ L\'orario di fine non può superare le 19:00.';
+        error.innerHTML = ' L\'orario di fine non può superare le 19:00.';
         btn.disabled = true;
         return;
     }
@@ -1050,7 +1050,7 @@ function updateDuration() {
     if (!sameDay) {
         preview.style.display = 'none';
         error.style.display   = '';
-        error.innerHTML = '⚠️ La prenotazione deve essere nella stessa giornata (09:00–19:00).';
+        error.innerHTML = ' La prenotazione deve essere nella stessa giornata (09:00–19:00).';
         btn.disabled = true;
         return;
     }
@@ -1058,7 +1058,7 @@ function updateDuration() {
     if (hasConflict(startVal, endVal, spotId)) {
         preview.style.display = 'none';
         error.style.display   = '';
-        error.innerHTML = `⚠️ Questo periodo si sovrappone a una prenotazione esistente.<br>
+        error.innerHTML = ` Questo periodo si sovrappone a una prenotazione esistente.<br>
             <small>Scegli uno dei periodi liberi suggeriti sopra.</small>`;
         btn.disabled = true;
         return;
@@ -1074,7 +1074,7 @@ function updateDuration() {
     const durText = parts.join(' ') || 'meno di un minuto';
 
     preview.style.display = '';
-    preview.innerHTML = `<span class="pk-dur-icon">⏱️</span> <strong>${durText}</strong> — ${fmtDateTime(new Date(startVal))} → ${fmtDateTime(new Date(endVal))}`;
+    preview.innerHTML = `<span class="pk-dur-icon"></span> <strong>${durText}</strong> — ${fmtDateTime(new Date(startVal))} → ${fmtDateTime(new Date(endVal))}`;
 }
 
 // ════════════════════════════════════════════════════════

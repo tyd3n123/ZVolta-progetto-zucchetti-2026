@@ -1007,7 +1007,7 @@ function updateDuration() {
     const showErr = msg => {
         preview.style.display = 'none';
         error.style.display   = '';
-        error.innerHTML = '⚠️ ' + msg;
+        error.innerHTML = ' ' + msg;
         btn.disabled = true;
     };
 
@@ -1029,7 +1029,7 @@ function updateDuration() {
     if (hrs  > 0) parts.push(`${hrs} or${hrs > 1 ? 'e' : 'a'}`);
     if (mins > 0) parts.push(`${mins} minut${mins > 1 ? 'i' : 'o'}`);
     preview.style.display = '';
-    preview.innerHTML = `⏱️ <strong>${parts.join(' ') || 'meno di un minuto'}</strong> — ${fmtDateTime(startDate)} → ${fmtDateTime(endDate)}`;
+    preview.innerHTML = ` <strong>${parts.join(' ') || 'meno di un minuto'}</strong> — ${fmtDateTime(startDate)} → ${fmtDateTime(endDate)}`;
 }
 
 // ════════════════════════════════════════════════════════
