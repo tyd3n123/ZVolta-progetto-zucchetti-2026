@@ -11,12 +11,12 @@ if (!isset($_SESSION['text_captcha'])) {
 
 // Controlla se il form è stato inviato
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $user = $_POST['User'] ?? '';
-    $password = $_POST['password'] ?? '';
-    $captchaInserito = trim($_POST['captcha'] ?? '');
+    $user = isset($_POST['User']) ? $_POST['User'] : '';
+    $password = isset($_POST['password']) ? $_POST['password'] : '';
+    $captchaInserito = isset($_POST['captcha']) ? trim($_POST['captcha']) : '';
     
     // Recupera i dati del mouse inviati tramite JavaScript
-    $mouseDataJson = $_POST['mouse_data'] ?? '[]';
+    $mouseDataJson = isset($_POST['mouse_data']) ? $_POST['mouse_data'] : '[]';
     
     $isBot = false;
     $motivoErrore = "";
@@ -102,9 +102,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
 
         <div class="field">
-          <label for="captcha">Copia questo codice:</label>
+          <label for="captcha">Ricopia questo codice!</label>
           <div style="text-align: center; margin-bottom: 10px; background: rgba(255,255,255,0.2); padding: 10px; border-radius: 25px;">
-            <strong style="color: white; font-size: 24px; letter-spacing: 5px; user-select: all;">
+            <strong id="captcha-display" style="color: white; font-size: 24px; letter-spacing: 5px; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;">
                 <?php echo $_SESSION['text_captcha']; ?>
             </strong>
           </div>
@@ -133,6 +133,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       document.getElementById('loginForm').addEventListener('submit', function() {
           document.getElementById('mouse_data').value = JSON.stringify(mouseTrack);
       });
+
+      const captchaDisplay = document.getElementById('captcha-display');
+      if (captchaDisplay) {
+          captchaDisplay.addEventListener('copy', function(event) { event.preventDefault(); });
+          captchaDisplay.addEventListener('cut', function(event) { event.preventDefault(); });
+          captchaDisplay.addEventListener('contextmenu', function(event) { event.preventDefault(); });
+      }
+
+      const captchaInput = document.getElementById('captcha');
+      if (captchaInput) {
+          captchaInput.addEventListener('paste', function(event) { event.preventDefault(); });
+      }
     </script>
 </body>
 </html>

@@ -5,10 +5,10 @@ $_SESSION["logged_in"] = false;
 require_once __DIR__ . "/../../config/config.php";
 
 // Get form data
-$username = trim($_POST["User"] ?? "");
-$password = $_POST["password"] ?? "";
-$captchaInserito = trim($_POST["captcha"] ?? "");
-$mouseDataJson = $_POST["mouse_data"] ?? '[]';
+$username = isset($_POST["User"]) ? trim($_POST["User"]) : "";
+$password = isset($_POST["password"]) ? $_POST["password"] : "";
+$captchaInserito = isset($_POST["captcha"]) ? trim($_POST["captcha"]) : "";
+$mouseDataJson = isset($_POST["mouse_data"]) ? $_POST["mouse_data"] : '[]';
 
 // 1. Check if username and password are empty
 if ($username === "" || $password === "") {
@@ -84,7 +84,7 @@ if ($result->num_rows === 0) {
     // Rigenera il codice dopo un tentativo fallito
     $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     $_SESSION['text_captcha'] = substr(str_shuffle($chars), 0, 5);
-    header("Location: ../dashboard/index.php");
+    header("Location: ../login.php");
     exit();
 }
 
@@ -105,6 +105,6 @@ if($user["username"] === $username && $user["password"] === $password) {
     // Rigenera il codice dopo un tentativo fallito
     $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     $_SESSION['text_captcha'] = substr(str_shuffle($chars), 0, 5);
-    header("Location: ../check-user.php");
+    header("Location: ../login.php");
     exit();
 }
