@@ -1,0 +1,731 @@
+<?php
+session_start();
+require_once __DIR__ . "/../../../config/config.php";
+
+// ── Auth check ─────────────────────────────────────────
+if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true || !isset($_SESSION['id_utente'])) {
+    header("Location: ../../login.php");
+    exit();
+}
+
+$id_utente = (int)$_SESSION['id_utente'];
+
+// ── Role check (coordinatore only) ────────────────────
+$stmt = $conn->prepare("SELECT r.nome_ruolo FROM utenti u JOIN ruoli r ON u.id_ruolo = r.id_ruolo WHERE u.id_utente = ?");
+$stmt->bind_param("i", $id_utente); $stmt->execute();
+$callerRole = $stmt->get_result()->fetch_assoc()['nome_ruolo'] ?? '';
+$stmt->close();
+if (strtolower($callerRole) !== 'coordinatore') {
+    header("Location: ../../login.php"); exit();
+}
+
+// ── Info utente ────────────────────────────────────────
+$stmt = $conn->prepare(
+    "SELECT u.nome, u.cognome, r.nome_ruolo AS ruolo
+     FROM utenti u
+     LEFT JOIN ruoli r ON u.id_ruolo = r.id_ruolo
+     WHERE u.id_utente = ? LIMIT 1"
+);
+$stmt->bind_param("i", $id_utente);
+$stmt->execute();
+$userInfo = $stmt->get_result()->fetch_assoc() ?? ['nome' => '', 'cognome' => '', 'ruolo' => ''];
+$stmt->close();
+
+// ── Handle POST: nuova prenotazione ───────────────────
+$feedback = null;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'book') {
+    $id_asset    = (int)($_POST['id_asset']   ?? 0);
+    $data_inizio = $_POST['data_inizio'] ?? '';
+    $data_fine   = $_POST['data_fine']   ?? '';
+
+    $tsInizio = strtotime($data_inizio);
+    $tsFine   = strtotime($data_fine);
+    $hInizio  = (int)date('H', $tsInizio) * 60 + (int)date('i', $tsInizio);
+    $hFine    = (int)date('H', $tsFine)   * 60 + (int)date('i', $tsFine);
+
+    if (!$id_asset || !$data_inizio || !$data_fine) {
+        $feedback = ['type' => 'error', 'msg' => 'Seleziona le date prima di procedere.'];
+    } elseif ($tsInizio < time()) {
+        $feedback = ['type' => 'error', 'msg' => 'Non puoi prenotare nel passato.'];
+    } elseif ($tsFine <= $tsInizio) {
+        $feedback = ['type' => 'error', 'msg' => 'La data di fine deve essere successiva alla data di inizio.'];
+    } elseif (date('Y-m-d', $tsInizio) !== date('Y-m-d', $tsFine)) {
+        $feedback = ['type' => 'error', 'msg' => 'La prenotazione deve essere nella stessa giornata (09:00–19:00).'];
+    } elseif ($hInizio < 9 * 60) {
+        $feedback = ['type' => 'error', 'msg' => 'L\'orario di inizio non può essere prima delle 09:00.'];
+    } elseif ($hInizio >= 19 * 60) {
+        $feedback = ['type' => 'error', 'msg' => 'L\'orario di inizio non può essere dalle 19:00 in poi.'];
+    } elseif ($hFine > 19 * 60) {
+        $feedback = ['type' => 'error', 'msg' => 'L\'orario di fine non può superare le 19:00.'];
+    } else {
+        $stmt = $conn->prepare(
+            "SELECT COUNT(*) AS c FROM prenotazioni
+             WHERE id_asset = ? AND data_inizio < ? AND data_fine > ?"
+        );
+        $stmt->bind_param("iss", $id_asset, $data_fine, $data_inizio);
+        $stmt->execute();
+        $overlap = $stmt->get_result()->fetch_assoc()['c'];
+        $stmt->close();
+
+        if ($overlap > 0) {
+            $feedback = ['type' => 'error', 'msg' => 'Il parcheggio è già occupato nel periodo selezionato.'];
+        } else {
+            try {
+                $conn->begin_transaction();
+                $stmt = $conn->prepare(
+                    "INSERT INTO prenotazioni (id_utente, id_asset, data_inizio, data_fine) VALUES (?, ?, ?, ?)"
+                );
+                $stmt->bind_param("iiss", $id_utente, $id_asset, $data_inizio, $data_fine);
+                if (!$stmt->execute()) throw new Exception($stmt->error);
+                $stmt->close();
+                $stmt = $conn->prepare("UPDATE asset SET stato = 'Occupato' WHERE id_asset = ?");
+                $stmt->bind_param("i", $id_asset);
+                if (!$stmt->execute()) throw new Exception($stmt->error);
+                $stmt->close();
+                $conn->commit();
+                $feedback = ['type' => 'success', 'msg' => 'Parcheggio prenotato con successo!'];
+            } catch (Exception $e) {
+                $conn->rollback();
+                $feedback = ['type' => 'error', 'msg' => 'Errore durante la prenotazione: ' . $e->getMessage()];
+            }
+        }
+    }
+}
+
+// ── Fetch parcheggi ────────────────────────────────────
+$parkingSpots = [];
+$result = $conn->query(
+    "SELECT a.id_asset, a.codice_asset,
+            CASE WHEN EXISTS (
+                SELECT 1 FROM prenotazioni pr
+                WHERE pr.id_asset = a.id_asset
+                  AND NOW() BETWEEN pr.data_inizio AND pr.data_fine
+            ) THEN 'Occupato' ELSE 'Disponibile' END AS stato,
+            COALESCE(p.numero_posto, '-')         AS numero_posto,
+            COALESCE(p.coperto, 0)                AS coperto,
+            COALESCE(p.colonnina_elettrica, 0)    AS colonnina_elettrica,
+            COALESCE(p.posizione, '-')            AS posizione
+     FROM asset a
+     LEFT JOIN parcheggio_dettagli p ON p.id_asset = a.id_asset
+     WHERE a.mappa = 'Parcheggio'
+     ORDER BY a.codice_asset"
+);
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $parkingSpots[] = [
+            'id'                  => (int)$row['id_asset'],
+            'name'                => $row['codice_asset'],
+            'status'              => $row['stato'],
+            'numero_posto'        => $row['numero_posto'],
+            'coperto'             => (int)$row['coperto'],
+            'colonnina_elettrica' => (int)$row['colonnina_elettrica'],
+            'posizione'           => $row['posizione'],
+        ];
+    }
+}
+
+// ── Stats ──────────────────────────────────────────────
+$totalSpots = count($parkingSpots);
+$availCount = count(array_filter($parkingSpots, fn($s) => strtolower($s['status']) !== 'occupato'));
+$occCount   = $totalSpots - $availCount;
+
+// ── Prenotazioni attive dell'utente ───────────────────
+$userBookings = [];
+$stmt = $conn->prepare(
+    "SELECT p.id_prenotazione, p.data_inizio, p.data_fine, a.codice_asset, a.id_asset
+     FROM prenotazioni p
+     JOIN asset a ON p.id_asset = a.id_asset
+     WHERE p.id_utente = ? AND a.mappa = 'Parcheggio' AND p.data_fine >= NOW()
+     ORDER BY p.data_inizio ASC"
+);
+$stmt->bind_param("i", $id_utente);
+$stmt->execute();
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) $userBookings[] = $row;
+$stmt->close();
+
+// ── Slot occupati per asset ────────────────────────────
+$occupiedSlotsByAsset = [];
+$result = $conn->query(
+    "SELECT p.id_asset, p.data_inizio, p.data_fine
+     FROM prenotazioni p
+     JOIN asset a ON p.id_asset = a.id_asset
+     WHERE a.mappa = 'Parcheggio' AND p.data_fine >= NOW()
+     ORDER BY p.data_inizio ASC"
+);
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $occupiedSlotsByAsset[$row['id_asset']][] = [
+            'inizio' => $row['data_inizio'],
+            'fine'   => $row['data_fine'],
+        ];
+    }
+}
+
+$reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
+?>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parcheggi | Northstar</title>
+    <link rel="stylesheet" href="../../admin/dashboard/dashboard.css">
+    <link rel="stylesheet" href="../../admin/parcheggi/parcheggi.css">
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────── -->
+<header class="header">
+    <div class="header-left">
+        <h1>Northstar</h1>
+        <nav class="header-breadcrumb">
+            <a href="../dashboard/index.php">Dashboard</a>
+            <span class="bc-sep">/</span>
+            <span class="bc-current">Parcheggi</span>
+        </nav>
+    </div>
+    <div class="pk-user-pill">
+        <?= htmlspecialchars($userInfo['nome'] . ' ' . $userInfo['cognome']) . ' - ' ?>
+        <span class="pk-role"><?= htmlspecialchars($userInfo['ruolo']) ?></span>
+    </div>
+</header>
+
+<div class="pk-page">
+
+    <!-- ── Titolo + Stats ──────────────────────────────── -->
+    <div class="pk-title-row">
+        <div>
+            <h2 class="pk-page-title">Parcheggi</h2>
+            <p class="pk-page-sub">Clicca su uno stallo nella cartina per prenotarlo</p>
+        </div>
+    </div>
+
+    <!-- ── Feedback ────────────────────────────────────── -->
+    <?php if ($feedback): ?>
+    <div class="pk-feedback pk-feedback--<?= $feedback['type'] ?>">
+        <?= $feedback['type'] === 'success' ? '✅' : '⚠️' ?>
+        <?= htmlspecialchars($feedback['msg']) ?>
+    </div>
+    <?php endif; ?>
+
+    <!-- Backdrop overlay pannello -->
+    <div class="pk-panel-backdrop" id="pk-backdrop" onclick="closeParkingPanel()"></div>
+
+    <!-- ── Mappa ───────────────────────────────────────── -->
+    <div class="pk-map-layout" id="map-layout">
+
+        <!-- Zona canvas -->
+        <div class="pk-map-zone" id="map-zone">
+
+            <!-- Stats bar -->
+            <div class="pk-map-topbar">
+                <span class="pk-map-label">Mappa Parcheggi — Sede</span>
+                <div class="pk-map-chips">
+                    <span class="pk-chip pk-chip--total"><?= $totalSpots ?> posti</span>
+                    <span class="pk-chip pk-chip--avail">✓ <?= $availCount ?> liberi</span>
+                    <?php if ($occCount > 0): ?>
+                    <span class="pk-chip pk-chip--occ">✗ <?= $occCount ?> occupati</span>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Canvas parcheggio -->
+            <div class="pk-canvas-wrap" id="pk-canvas-wrap">
+                <canvas id="parkingCanvas"></canvas>
+            </div>
+
+            <!-- Legenda -->
+            <div class="pk-legend">
+                <div class="pk-leg-item"><span class="pk-leg-dot pk-leg--avail"></span>Disponibile</div>
+                <div class="pk-leg-item"><span class="pk-leg-dot pk-leg--occ"></span>Occupato</div>
+                <div class="pk-leg-item"><span class="pk-leg-icon">🏠</span>Coperto</div>
+                <div class="pk-leg-item"><span class="pk-leg-icon">⚡</span>Colonnina</div>
+            </div>
+
+        </div><!-- /.pk-map-zone -->
+
+        <!-- Pannello laterale slide-in -->
+        <div class="pk-side-panel" id="side-panel">
+
+            <div class="pk-panel-top">
+                <div>
+                    <h3 class="pk-panel-parking-name" id="panel-title">—</h3>
+                    <div id="panel-status-pill" style="margin-top:6px"></div>
+                </div>
+                <button class="pk-panel-close" onclick="closeParkingPanel()" title="Chiudi">✕</button>
+            </div>
+
+            <div class="pk-panel-body">
+
+                <div class="pk-panel-section">
+                    <div class="pk-info-grid" id="panel-info-grid"></div>
+                </div>
+
+                <div class="pk-panel-section">
+                    <p class="pk-panel-section-title">Disponibilità oggi</p>
+                    <div id="panel-timeline"></div>
+                </div>
+
+                <div class="pk-panel-section">
+                    <p class="pk-panel-section-title">Prossimi periodi liberi</p>
+                    <p class="pk-panel-section-hint">Clicca un periodo per compilare automaticamente le date</p>
+                    <div id="panel-free-slots"></div>
+                </div>
+
+                <div class="pk-panel-section pk-panel-form-section">
+                    <p class="pk-panel-section-title">Prenota questo stallo</p>
+                    <form method="POST" id="booking-form">
+                        <input type="hidden" name="action"   value="book">
+                        <input type="hidden" name="id_asset" id="panel-asset-id" value="">
+                        <div class="pk-fields-row">
+                            <div class="pk-field">
+                                <label>Data Inizio</label>
+                                <input type="datetime-local" name="data_inizio" id="data-inizio"
+                                       value="<?= htmlspecialchars($_POST['data_inizio'] ?? '') ?>"
+                                       required onchange="updateDuration()">
+                            </div>
+                            <div class="pk-field">
+                                <label>Data Fine</label>
+                                <input type="datetime-local" name="data_fine" id="data-fine"
+                                       value="<?= htmlspecialchars($_POST['data_fine'] ?? '') ?>"
+                                       required onchange="updateDuration()">
+                            </div>
+                        </div>
+                        <div id="pk-duration-preview" class="pk-duration-preview" style="display:none;"></div>
+                        <div id="pk-form-error" class="pk-form-error" style="display:none;"></div>
+                        <button type="submit" class="pk-submit-btn" id="submit-btn">Conferma prenotazione</button>
+                    </form>
+                </div>
+
+            </div><!-- /.pk-panel-body -->
+        </div><!-- /.pk-side-panel -->
+
+    </div><!-- /.pk-map-layout -->
+
+    <!-- ── Prenotazioni attive utente ───────────────────── -->
+    <div class="pk-bookings-strip">
+        <div class="pk-strip-header">
+            <p class="pk-strip-title">Le tue prenotazioni attive</p>
+            <span class="pk-count-badge"><?= count($userBookings) ?></span>
+        </div>
+
+        <?php if (empty($userBookings)): ?>
+            <div class="pk-empty"><span></span><p>Nessuna prenotazione parcheggio attiva</p></div>
+        <?php else: ?>
+            <div class="pk-bookings-list">
+                <?php foreach ($userBookings as $b):
+                    $start    = new DateTime($b['data_inizio']);
+                    $end      = new DateTime($b['data_fine']);
+                    $now      = new DateTime();
+                    $isActive = $start <= $now && $end >= $now;
+                    $sClass   = $isActive ? 'pk-status--now' : 'pk-status--future';
+                    $sLabel   = $isActive ? 'In corso' : 'Programmato';
+                    $diff     = $start->diff($end);
+                    $durStr   = $diff->days > 0 ? $diff->days.'g '.$diff->h.'h' : $diff->h.'h '.$diff->i.'m';
+                ?>
+                <div class="pk-booking-item">
+                    <div class="pk-booking-top">
+                        <span class="pk-asset-pill"><?= htmlspecialchars($b['codice_asset']) ?></span>
+                        <span class="pk-status-pill <?= $sClass ?>"><?= $sLabel ?></span>
+                        <span class="pk-dur"><?= $durStr ?></span>
+                    </div>
+                    <div class="pk-booking-dates">
+                        <?= date('d/m/Y H:i', strtotime($b['data_inizio'])) ?>
+                        <span class="pk-arrow">→</span>
+                        <?= date('d/m/Y H:i', strtotime($b['data_fine'])) ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+
+</div><!-- /.pk-page -->
+
+<script>
+const parkingData   = <?= json_encode($parkingSpots) ?>;
+const occupiedSlots = <?= json_encode($occupiedSlotsByAsset) ?>;
+const reopenId      = <?= $reopenAssetId ?>;
+
+const canvas = document.getElementById('parkingCanvas');
+const ctx    = canvas.getContext('2d');
+const wrap   = document.getElementById('pk-canvas-wrap');
+
+let selectedId = null;
+let hitboxes   = [];
+
+const C = {
+    asphalt:     '#1c1f27', asphaltLane: '#232630',
+    lineWhite:   'rgba(255,255,255,0.55)', lineYellow: '#f5c518',
+    dashLine:    'rgba(245,197,24,0.55)',
+    avail:       'rgba(74,222,128,0.22)', availBrd: '#4ade80',
+    occ:         'rgba(248,113,113,0.25)', occBrd: '#f87171',
+    sel:         'rgba(129,140,248,0.35)', selBrd: '#818cf8',
+    empty:       'rgba(255,255,255,0.04)', emptyBrd: 'rgba(255,255,255,0.18)',
+    textMain:    '#ffffff', textMuted: 'rgba(255,255,255,0.45)',
+    entrata:     '#f5c518',
+    SPACE_W: 74, SPACE_H: 118, GAP: 2, LANE_H: 88, MX: 52, MY: 36, MAX_ROW: 8,
+};
+
+function computeLayout() {
+    const W = canvas.width;
+    const availW = W - 2 * C.MX;
+    const perRow = Math.max(1, Math.min(C.MAX_ROW, Math.floor(availW / (C.SPACE_W + C.GAP))));
+    const n      = parkingData.length;
+    const nRows  = Math.ceil(n / perRow);
+    const rowUsedW = perRow * C.SPACE_W + (perRow - 1) * C.GAP;
+    const startX   = C.MX + Math.max(0, (availW - rowUsedW) / 2);
+    const rowY = [];
+    let y = C.MY;
+    for (let r = 0; r < nRows; r++) {
+        rowY.push(y);
+        y += C.SPACE_H;
+        if (r < nRows - 1) y += C.LANE_H;
+    }
+    const needH = y + C.MY;
+    if (canvas.height !== needH) canvas.height = Math.max(280, needH);
+    return { perRow, startX, rowY, nRows, n };
+}
+
+function draw() {
+    const W = canvas.width, H = canvas.height;
+    const layout = computeLayout();
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = C.asphalt;
+    ctx.fillRect(0, 0, W, H);
+    drawAsphaltTexture(W, H);
+    for (let r = 0; r < layout.nRows - 1; r++) {
+        const laneY = layout.rowY[r] + C.SPACE_H;
+        drawLane(layout.startX, laneY, layout.perRow * C.SPACE_W + (layout.perRow - 1) * C.GAP, C.LANE_H, r);
+    }
+    hitboxes = [];
+    for (let r = 0; r < layout.nRows; r++) {
+        const startIdx = r * layout.perRow;
+        const rowSpots = parkingData.slice(startIdx, startIdx + layout.perRow);
+        drawRow(rowSpots, layout.startX, layout.rowY[r], (r % 2 === 0) ? 'down' : 'up', layout.perRow);
+    }
+    if (layout.nRows > 0) {
+        const laneY = layout.nRows > 1 ? layout.rowY[0] + C.SPACE_H : layout.rowY[0] + C.SPACE_H / 2 - C.LANE_H / 2;
+        drawEntrance(W, laneY, C.LANE_H);
+    }
+}
+
+function drawAsphaltTexture(W, H) {
+    ctx.save(); ctx.globalAlpha = 0.025;
+    for (let i = 0; i < 800; i++) {
+        const x = Math.random()*W, y = Math.random()*H, r = Math.random()*1.2;
+        ctx.fillStyle = Math.random() > 0.5 ? '#fff' : '#000';
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+}
+
+function drawLane(startX, laneY, rowUsedW, laneH, rowIdx) {
+    const W = canvas.width;
+    ctx.fillStyle = C.asphaltLane;
+    ctx.fillRect(0, laneY, W, laneH);
+    const cy = laneY + laneH / 2;
+    ctx.strokeStyle = C.dashLine; ctx.lineWidth = 1.5; ctx.setLineDash([18, 14]);
+    ctx.beginPath(); ctx.moveTo(C.MX, cy); ctx.lineTo(W - C.MX, cy); ctx.stroke();
+    ctx.setLineDash([]);
+    const goRight = rowIdx % 2 === 0;
+    const arrowCount = Math.max(2, Math.floor((W - 2 * C.MX) / 200));
+    for (let i = 1; i <= arrowCount; i++) {
+        drawArrow(C.MX + i * (W - 2 * C.MX) / (arrowCount + 1), cy, goRight ? 0 : Math.PI);
+    }
+    ctx.strokeStyle = C.lineYellow; ctx.lineWidth = 2; ctx.globalAlpha = 0.6;
+    ctx.beginPath(); ctx.moveTo(C.MX-1, laneY); ctx.lineTo(W-C.MX+1, laneY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(C.MX-1, laneY+laneH); ctx.lineTo(W-C.MX+1, laneY+laneH); ctx.stroke();
+    ctx.globalAlpha = 1;
+}
+
+function drawArrow(x, y, angle) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.beginPath(); ctx.moveTo(14,0); ctx.lineTo(-8,-8); ctx.lineTo(-4,0); ctx.lineTo(-8,8); ctx.closePath(); ctx.fill();
+    ctx.restore();
+}
+
+function drawEntrance(W, laneY, laneH) {
+    const eW=44, eH=laneH*0.5, eX=W-C.MX+4, eY=laneY+(laneH-eH)/2;
+    ctx.fillStyle=C.entrata; ctx.globalAlpha=0.9;
+    ctx.beginPath(); ctx.moveTo(eX,eY); ctx.lineTo(eX+eW*0.55,eY+eH/2); ctx.lineTo(eX,eY+eH); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha=1;
+    ctx.fillStyle=C.entrata; ctx.font='bold 8px system-ui'; ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText('IN/OUT', eX+eW*0.65, eY+eH/2);
+}
+
+function drawRow(rowSpots, startX, rowY, facing, perRow) {
+    const rowUsedW = perRow * C.SPACE_W + (perRow - 1) * C.GAP;
+    ctx.strokeStyle = C.lineYellow; ctx.lineWidth = 3; ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    if (facing === 'down') { ctx.moveTo(startX, rowY); ctx.lineTo(startX+rowUsedW, rowY); }
+    else { ctx.moveTo(startX, rowY+C.SPACE_H); ctx.lineTo(startX+rowUsedW, rowY+C.SPACE_H); }
+    ctx.stroke(); ctx.globalAlpha = 1;
+    rowSpots.forEach((spot, i) => {
+        const sx = startX + i * (C.SPACE_W + C.GAP);
+        drawSpace(sx, rowY, spot, facing, spot && spot.id === selectedId);
+        if (spot) hitboxes.push({ x: sx, y: rowY, w: C.SPACE_W, h: C.SPACE_H, spot });
+    });
+    ctx.strokeStyle = C.lineWhite; ctx.lineWidth = 1.5;
+    for (let i = 0; i <= rowSpots.length; i++) {
+        const lx = startX + i * (C.SPACE_W + C.GAP) - (i > 0 ? C.GAP : 0);
+        ctx.beginPath(); ctx.moveTo(lx, rowY); ctx.lineTo(lx, rowY+C.SPACE_H); ctx.stroke();
+    }
+}
+
+function drawSpace(x, y, spot, facing, isSelected) {
+    const isOcc = spot && spot.status.toLowerCase() === 'occupato';
+    const isEmpty = !spot;
+    ctx.fillStyle = isSelected ? C.sel : (isEmpty ? C.empty : (isOcc ? C.occ : C.avail));
+    ctx.fillRect(x, y, C.SPACE_W, C.SPACE_H);
+    if (isSelected) { ctx.strokeStyle = C.selBrd; ctx.lineWidth = 2.5; ctx.strokeRect(x+1.25, y+1.25, C.SPACE_W-2.5, C.SPACE_H-2.5); }
+    if (isEmpty) return;
+    const cx = x + C.SPACE_W/2;
+    const circR = 16;
+    const circY = facing === 'down' ? y + C.SPACE_H*0.32 : y + C.SPACE_H*0.68;
+    ctx.fillStyle = isOcc ? '#ef4444' : '#22c55e';
+    ctx.beginPath(); ctx.arc(cx, circY, circR, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = isOcc ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)';
+    ctx.beginPath(); ctx.arc(cx, circY, circR+5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(isOcc ? '✕' : 'P', cx, circY);
+    const code = spot.name.replace(/Parcheggio\s*/i, '').trim() || spot.name;
+    ctx.fillStyle = isSelected ? '#c7d2fe' : C.textMain;
+    ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const labelY = facing === 'down' ? y+C.SPACE_H*0.62 : y+C.SPACE_H*0.38;
+    ctx.fillText(code, cx, labelY);
+    if (spot.numero_posto && spot.numero_posto !== '-') {
+        ctx.fillStyle = C.textMuted; ctx.font = '9px system-ui';
+        ctx.fillText('#' + spot.numero_posto, cx, facing === 'down' ? labelY+13 : labelY-13);
+    }
+    const icons = [];
+    if (spot.coperto == 1) icons.push('🏠');
+    if (spot.colonnina_elettrica == 1) icons.push('⚡');
+    if (icons.length > 0) {
+        ctx.font = '11px system-ui';
+        ctx.fillText(icons.join(' '), cx, facing === 'down' ? y+C.SPACE_H-11 : y+11);
+    }
+    if (isSelected) {
+        ctx.fillStyle = 'rgba(129,140,248,0.8)'; ctx.font = '600 9px system-ui';
+        ctx.textAlign = 'left'; ctx.textBaseline = facing === 'down' ? 'bottom' : 'top';
+        ctx.fillText('▶ selezionato', x+6, facing === 'down' ? y+C.SPACE_H-3 : y+3);
+    }
+}
+
+canvas.addEventListener('click', function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const sx = canvas.width/rect.width, sy = canvas.height/rect.height;
+    const mx = (e.clientX-rect.left)*sx, my = (e.clientY-rect.top)*sy;
+    let hit = null;
+    for (const box of hitboxes) { if (mx>=box.x && mx<=box.x+box.w && my>=box.y && my<=box.y+box.h) { hit=box; break; } }
+    if (hit) { selectedId = hit.spot.id; openParkingPanel(hit.spot); }
+    else { selectedId = null; closeParkingPanel(); }
+    draw();
+});
+
+canvas.addEventListener('mousemove', function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const sx = canvas.width/rect.width, sy = canvas.height/rect.height;
+    const mx = (e.clientX-rect.left)*sx, my = (e.clientY-rect.top)*sy;
+    canvas.style.cursor = hitboxes.some(b => mx>=b.x && mx<=b.x+b.w && my>=b.y && my<=b.y+b.h) ? 'pointer' : 'default';
+});
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { selectedId=null; closeParkingPanel(); draw(); } });
+
+function openParkingPanel(spot) {
+    document.getElementById('pk-backdrop').classList.add('visible');
+    const isOcc = spot.status.toLowerCase() === 'occupato';
+    document.getElementById('panel-title').textContent = spot.name;
+    document.getElementById('panel-status-pill').innerHTML =
+        `<span class="pk-status-pill ${isOcc ? 'pk-status--occ' : 'pk-status--avail'}">${isOcc ? 'Occupato' : 'Disponibile'}</span>`;
+    document.getElementById('panel-info-grid').innerHTML = `
+        <div class="pk-info-tile"><span class="pk-info-tile-label">N° Posto</span><span class="pk-info-tile-val">${spot.numero_posto}</span></div>
+        <div class="pk-info-tile"><span class="pk-info-tile-label">Posizione</span><span class="pk-info-tile-val">${spot.posizione}</span></div>
+        <div class="pk-info-tile"><span class="pk-info-tile-label">Coperto</span><span class="pk-info-tile-val">${spot.coperto==1?'<span class="pk-tile-yes">🏠 Sì</span>':'<span class="pk-tile-no">No</span>'}</span></div>
+        <div class="pk-info-tile"><span class="pk-info-tile-label">Colonnina</span><span class="pk-info-tile-val">${spot.colonnina_elettrica==1?'<span class="pk-tile-yes">⚡ Sì</span>':'<span class="pk-tile-no">No</span>'}</span></div>`;
+    document.getElementById('panel-timeline').innerHTML   = renderTimeline(spot.id);
+    document.getElementById('panel-free-slots').innerHTML = renderFreeSlots(spot.id);
+    document.getElementById('panel-asset-id').value = spot.id;
+    document.getElementById('side-panel').classList.add('open');
+    document.getElementById('data-inizio').value = '';
+    document.getElementById('data-fine').value   = '';
+    document.getElementById('pk-duration-preview').style.display = 'none';
+    document.getElementById('pk-form-error').style.display       = 'none';
+    document.getElementById('submit-btn').disabled = false;
+    const minVal = toLocalISO(new Date());
+    document.getElementById('data-inizio').min = minVal;
+    document.getElementById('data-fine').min   = minVal;
+}
+
+function closeParkingPanel() {
+    document.getElementById('side-panel').classList.remove('open');
+    document.getElementById('pk-backdrop').classList.remove('visible');
+    selectedId = null; draw();
+}
+
+function renderTimeline(spotId) {
+    const now      = new Date();
+    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(),  9, 0, 0);
+    const dayEnd   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 19, 0, 0);
+    const dayMs    = 10 * 3600000;
+    const rawSlots = (occupiedSlots[spotId] || [])
+        .map(s => ({ start: new Date(s.inizio), end: new Date(s.fine) }))
+        .filter(s => s.end > dayStart && s.start < dayEnd)
+        .sort((a, b) => a.start - b.start);
+    const segs = []; let ptr = dayStart.getTime();
+    for (const occ of rawSlots) {
+        const oS = Math.max(occ.start.getTime(), dayStart.getTime());
+        const oE = Math.min(occ.end.getTime(), dayEnd.getTime());
+        if (oS > ptr) segs.push({ type:'free', start:ptr, end:oS });
+        segs.push({ type:'occ', start:oS, end:oE }); ptr = oE;
+    }
+    if (ptr < dayEnd.getTime()) segs.push({ type:'free', start:ptr, end:dayEnd.getTime() });
+    const bars = segs.map(s => {
+        const pct = ((s.end - s.start) / dayMs * 100).toFixed(2);
+        return `<div class="pk-tl-seg pk-tl-seg--${s.type}" style="width:${pct}%"
+                     title="${s.type==='occ'?'Occupato':'Libero'}: ${fmtTime(new Date(s.start))} – ${fmtTime(new Date(s.end))}"></div>`;
+    }).join('');
+    const nowPct = ((now - dayStart) / dayMs * 100).toFixed(2);
+    const nowMarker = nowPct >= 0 && nowPct <= 100
+        ? `<div class="pk-tl-now" style="left:${nowPct}%"><span class="pk-tl-now-tip">ora</span></div>` : '';
+    const labels = [9,11,13,15,17,19].map(h => {
+        const pct = ((h-9)/10*100).toFixed(1);
+        return `<span class="pk-tl-label" style="left:${pct}%">${String(h).padStart(2,'0')}:00</span>`;
+    }).join('');
+    const todayOcc = rawSlots.length;
+    const summary = todayOcc === 0
+        ? `<span class="pk-tl-summary pk-tl-summary--free">Stallo libero per tutta la giornata</span>`
+        : `<span class="pk-tl-summary pk-tl-summary--occ">${todayOcc} prenotazion${todayOcc>1?'i':'e'} oggi</span>`;
+    return `<div class="pk-timeline"><div class="pk-tl-wrap"><div class="pk-tl-bar">${bars}</div>${nowMarker}<div class="pk-tl-labels">${labels}</div></div><div style="margin-top:8px">${summary}</div></div>`;
+}
+
+function getFreeWindows(spotId) {
+    const now = new Date();
+    const cursor = new Date(now);
+    cursor.setMinutes(Math.ceil(cursor.getMinutes()/15)*15, 0, 0);
+    if (cursor <= now) cursor.setMinutes(cursor.getMinutes()+15);
+    const occupied = (occupiedSlots[spotId] || []).map(s => ({ start: new Date(s.inizio), end: new Date(s.fine) })).sort((a,b) => a.start-b.start);
+    const windows = [];
+    for (let d = 0; d < 7 && windows.length < 4; d++) {
+        const base     = new Date(now.getFullYear(), now.getMonth(), now.getDate()+d);
+        const winStart = new Date(base.getFullYear(), base.getMonth(), base.getDate(),  9, 0, 0);
+        const winEnd   = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 19, 0, 0);
+        const from = d === 0 ? new Date(Math.max(cursor.getTime(), winStart.getTime())) : winStart;
+        if (from >= winEnd) continue;
+        const dayOcc = occupied.filter(s => s.end > from && s.start < winEnd);
+        let ptr = new Date(from);
+        for (const occ of dayOcc) {
+            if (occ.start > ptr) {
+                windows.push({ start: new Date(ptr), end: new Date(Math.min(occ.start.getTime(), winEnd.getTime())) });
+                if (windows.length >= 4) break;
+            }
+            if (occ.end > ptr) ptr = new Date(Math.min(occ.end.getTime(), winEnd.getTime()));
+        }
+        if (windows.length < 4 && ptr < winEnd) windows.push({ start: new Date(ptr), end: winEnd });
+    }
+    return windows.slice(0, 4);
+}
+
+function renderFreeSlots(spotId) {
+    const windows = getFreeWindows(spotId);
+    if (windows.length === 0) return `<div class="pk-no-slots">Nessun periodo libero nei prossimi 7 giorni</div>`;
+    return windows.map(fw => {
+        const durMs = fw.end - fw.start;
+        const durH  = Math.floor(durMs / 3600000);
+        const durM  = Math.floor((durMs % 3600000) / 60000);
+        const durLabel = durH > 0 ? `${durH}h${durM > 0 ? ' '+durM+'m' : ''}` : `${durM}m`;
+        return `<div class="pk-free-slot" onclick="prefillSlot('${toLocalISO(fw.start)}','${toLocalISO(fw.end)}')">
+                    <div class="pk-fs-left">
+                        <span class="pk-fs-day">${fmtDay(fw.start)}</span>
+                        <span class="pk-fs-range">${fmtTime(fw.start)} → ${fmtTime(fw.end)}</span>
+                    </div>
+                    <div class="pk-fs-right">
+                        <span class="pk-fs-dur">${durLabel}</span>
+                        <span class="pk-fs-cta">Prenota →</span>
+                    </div>
+                </div>`;
+    }).join('');
+}
+
+function prefillSlot(startISO, endISO) {
+    document.getElementById('data-inizio').value = startISO;
+    document.getElementById('data-fine').value   = endISO;
+    updateDuration();
+    document.getElementById('booking-form').scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+function hasConflict(startVal, endVal, spotId) {
+    if (!startVal || !endVal || !spotId) return false;
+    const s = new Date(startVal), e = new Date(endVal);
+    return (occupiedSlots[spotId] || []).some(sl => s < new Date(sl.fine) && e > new Date(sl.inizio));
+}
+
+function updateDuration() {
+    const startVal = document.getElementById('data-inizio').value;
+    const endVal   = document.getElementById('data-fine').value;
+    const preview  = document.getElementById('pk-duration-preview');
+    const error    = document.getElementById('pk-form-error');
+    const btn      = document.getElementById('submit-btn');
+    const spotId   = parseInt(document.getElementById('panel-asset-id').value);
+
+    if (!startVal || !endVal) { preview.style.display='none'; error.style.display='none'; btn.disabled=false; return; }
+    if (startVal) document.getElementById('data-fine').min = startVal;
+
+    const sDate = new Date(startVal), eDate = new Date(endVal);
+    const startMins = sDate.getHours()*60 + sDate.getMinutes();
+    const endMins   = eDate.getHours()*60  + eDate.getMinutes();
+    const sameDay   = sDate.toDateString() === eDate.toDateString();
+
+    function showErr(msg) { preview.style.display='none'; error.style.display=''; error.innerHTML='⚠️ '+msg; btn.disabled=true; }
+
+    if (sDate < new Date())    { showErr('Non puoi prenotare nel passato.'); return; }
+    if (eDate <= sDate)        { showErr('La data di fine deve essere successiva alla data di inizio.'); return; }
+    if (!sameDay)              { showErr('La prenotazione deve essere nella stessa giornata (09:00–19:00).'); return; }
+    if (startMins < 9*60)     { showErr('L\'orario di inizio non può essere prima delle 09:00.'); return; }
+    if (startMins >= 19*60)   { showErr('L\'orario di inizio non può essere dalle 19:00 in poi.'); return; }
+    if (endMins > 19*60)      { showErr('L\'orario di fine non può superare le 19:00.'); return; }
+    if (hasConflict(startVal, endVal, spotId)) {
+        showErr('Questo periodo si sovrappone a una prenotazione esistente.<br><small>Scegli uno dei periodi liberi suggeriti sopra.</small>'); return;
+    }
+
+    error.style.display = 'none'; btn.disabled = false;
+    const ms = eDate - sDate;
+    const days=Math.floor(ms/86400000), hrs=Math.floor((ms%86400000)/3600000), mins=Math.floor((ms%3600000)/60000);
+    const parts=[];
+    if (days>0) parts.push(`${days} giorn${days>1?'i':'o'}`);
+    if (hrs>0)  parts.push(`${hrs} or${hrs>1?'e':'a'}`);
+    if (mins>0) parts.push(`${mins} minut${mins>1?'i':'o'}`);
+    preview.style.display = '';
+    preview.innerHTML = `<span class="pk-dur-icon">⏱️</span> <strong>${parts.join(' ')||'meno di un minuto'}</strong> — ${fmtDateTime(sDate)} → ${fmtDateTime(eDate)}`;
+}
+
+function toLocalISO(d) {
+    const p = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function fmtDay(d) {
+    const t = new Date(); t.setHours(0,0,0,0);
+    const diff = Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate()) - t) / 86400000);
+    if (diff===0) return 'Oggi'; if (diff===1) return 'Domani'; if (diff===2) return 'Dopodomani';
+    return d.toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'short'});
+}
+function fmtTime(d)     { return d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}); }
+function fmtDateTime(d) { return d.toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+
+function resize() { canvas.width = wrap.clientWidth; draw(); }
+const ro = new ResizeObserver(resize);
+ro.observe(wrap);
+resize();
+updateDuration();
+
+if (reopenId) {
+    const spot = parkingData.find(s => s.id == reopenId);
+    if (spot) { selectedId = reopenId; setTimeout(() => { openParkingPanel(spot); draw(); }, 80); }
+}
+</script>
+
+</body>
+</html>
