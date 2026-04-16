@@ -202,7 +202,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
     <!-- Title row -->
     <div class="sr-title-row">
         <div>
-            <h2 class="sr-page-title">Sale Riunioni</h2>
+            <h2 class="sr-page-title">🏢 Sale Riunioni</h2>
             <p class="sr-page-sub">Clicca su una sala nella planimetria per prenotarla</p>
         </div>
     </div>
@@ -225,7 +225,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
         <div class="sr-map-zone" id="map-zone">
 
             <div class="sr-map-header">
-                <p class="sr-map-title">Planimetria Sale Riunioni — Sede</p>
+                <p class="sr-map-title">📍 Planimetria Sale Riunioni — Sede</p>
                 <div class="sr-map-legend">
                     <div class="sr-legend-item">
                         <span class="sr-legend-dot sr-legend-dot--avail"></span>Disponibile
@@ -238,7 +238,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
 
             <!-- Stats bar -->
             <div class="sr-map-stats">
-                <span class="sr-stat-chip sr-stat-chip--total"><?= $totalRooms ?> sale</span>
+                <span class="sr-stat-chip sr-stat-chip--total">🏢 <?= $totalRooms ?> sale</span>
                 <span class="sr-stat-chip sr-stat-chip--avail">✓ <?= $availCount ?> disponibili</span>
                 <?php if ($occCount > 0): ?>
                     <span class="sr-stat-chip sr-stat-chip--occ">✗ <?= $occCount ?> occupate</span>
@@ -248,7 +248,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
             <!-- Canvas planimetria -->
             <?php if (empty($roomSpots)): ?>
                 <div class="sr-empty">
-                    <span></span>
+                    <span>🏢</span>
                     <p>Nessuna sala riunione disponibile</p>
                 </div>
             <?php else: ?>
@@ -277,15 +277,30 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
                 <!-- Info tiles -->
                 <div class="sr-info-section">
                     <div class="sr-info-grid" id="panel-info-grid"></div>
-
-                    <p class="sr-panel-section-title">Periodi già occupati</p>
-                    <div class="sr-panel-slots" id="panel-slots"></div>
                 </div>
 
-                <!-- Form prenotazione -->
-                <div class="sr-panel-form-wrap full-width">
-                    <p class="sr-panel-section-title">Nuova Prenotazione</p>
+                <div class="sr-panel-sep"></div>
 
+                <!-- Timeline oggi -->
+                <div>
+                    <p class="sr-panel-section-title">🕐 Disponibilità oggi (09:00–19:00)</p>
+                    <div id="panel-timeline"></div>
+                </div>
+
+                <div class="sr-panel-sep"></div>
+
+                <!-- Prossimi slot liberi -->
+                <div>
+                    <p class="sr-panel-section-title">✅ Prossimi periodi liberi</p>
+                    <p style="font-size:11px;color:var(--clr-text-3);margin:0 0 10px">Clicca un periodo per precompilare le date</p>
+                    <div id="panel-free-slots"></div>
+                </div>
+
+                <div class="sr-panel-sep"></div>
+
+                <!-- Form prenotazione -->
+                <div>
+                    <p class="sr-panel-section-title">✏️ Prenota</p>
                     <form method="POST" id="booking-form">
                         <input type="hidden" name="action"   value="book">
                         <input type="hidden" name="id_asset" id="panel-asset-id" value="">
@@ -303,12 +318,8 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
                                    required onchange="updateDuration()">
                         </div>
 
-                        <div id="sr-duration-preview" class="sr-duration-preview" style="display:none;">
-                            <span class="sr-duration-icon">⏱️</span>
-                            <span id="sr-duration-text"></span>
-                        </div>
-
-                        <div id="sr-form-error" class="sr-form-error" style="display:none;"></div>
+                        <div id="sr-duration-preview" class="sr-duration-preview" style="display:none;margin-bottom:10px"></div>
+                        <div id="sr-form-error"       class="sr-form-error"       style="display:none;margin-bottom:10px"></div>
 
                         <button type="submit" class="sr-submit-btn" id="submit-btn">
                             Conferma Prenotazione
@@ -328,7 +339,7 @@ $reopenAssetId = (!empty($_POST['id_asset'])) ? (int)$_POST['id_asset'] : 0;
 
         <?php if (empty($userBookings)): ?>
             <div class="sr-empty">
-                <span></span>
+                <span>🏢</span>
                 <p>Nessuna prenotazione sala attiva</p>
             </div>
         <?php else: ?>
